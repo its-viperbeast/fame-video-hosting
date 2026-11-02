@@ -1,0 +1,38 @@
+{
+  "name": "frame-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "scripts": {
+    "dev": "bun --watch server.js",
+    "start": "bun server.js",
+    "test": "bun test --isolate ./test",
+    "test:delete-live": "bun scripts/check-delete-flow.js",
+    "password": "bun scripts/hash-password.js",
+    "db:remove-version-keys": "bun scripts/remove-version-keys.js",
+    "format": "bun ./node_modules/prettier/bin/prettier.cjs --write .",
+    "format:check": "bun ./node_modules/prettier/bin/prettier.cjs --check ."
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.900.0",
+    "@aws-sdk/s3-request-presigner": "^3.900.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.0",
+    "multer": "^2.0.2",
+    "sharp": "^0.35.5",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10",
+    "supertest": "^7.1.0"
+  }
+}

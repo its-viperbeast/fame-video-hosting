@@ -1,0 +1,48 @@
+import jwt from "jsonwebtoken";
+import { timingSafeEqual, scryptSync } from "node:crypto";
+import { env } from "../config/env.js";
+import Admin from "../models/Admin.js";
+import { HttpError } from "../utils/http.js";
+export const cookieOptions = {
+  httpOnly: true,
+  secure: env.NODE_ENV === "production",
+  sameSite: "lax",
+  path: "/api",
+  maxAge: 8 * 60 * 60 * 1000,
+};
+export function verifyPassword(password, hash) {
+  const [salt, expected] = hash.split(":");
+  const derived = scryptSync(password, salt, 64);
+  return timingSafeEqual(derived, Buffer.from(expected, "hex"));
+}
+export async function requireAuth(req, _res, next) {
+  try {
+    const user = jwt.verify(
+      req.cookies.frame_session || "",
+      env.SESSION_SECRET,
+      { algorithms: ["HS256"], audience: "frame-api", issuer: "frame" },
+    );
+    const admin =
+      user.role === "admin" &&
+      (await Admin.findOne({ email: String(user.sub || "").toLowerCase() }));
+    if (!admin) throw new Error("Unauthorized");
+    req.user = {
+      id: admin.email,
+      email: admin.email,
+      name: admin.name,
+      role: admin.role,
+    };
+    next();
+  } catch {
+    next(new HttpError(401, "Please sign in to continue.", "UNAUTHORIZED"));
+  }
+}
+export function requireOrigin(req, _res, next) {
+  // CORS is not a CSRF defense; every cookie-authenticated mutation must pass this check.
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+  if (req.get("origin") !== new URL(env.FRONTEND_URL).origin)
+    return next(
+      new HttpError(403, "Request origin is not allowed.", "INVALID_ORIGIN"),
+    );
+  next();
+}

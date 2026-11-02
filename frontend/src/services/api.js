@@ -1,0 +1,152 @@
+import axios from "axios";
+const http = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:5001/api",
+  withCredentials: true,
+  timeout: 30000,
+});
+// Used when a proxy or timeout answers without the API's error envelope.
+const fallbackMessages = {
+  ERR_NETWORK:
+    "Cannot reach the server. Check your connection and backend configuration.",
+  ECONNABORTED: "The server took too long to respond. Please try again.",
+  ERR_CANCELED: "Upload cancelled.",
+  413: "This file is larger than the upload limit.",
+  502: "The server is temporarily unavailable. Please try again.",
+  503: "The server is temporarily unavailable. Please try again.",
+  504: "The server took too long to respond. Please try again.",
+};
+http.interceptors.response.use(
+  (r) => r.data.data,
+  (error) => {
+    const e = new Error(
+      error.response?.data?.error?.message ||
+        fallbackMessages[error.response?.status] ||
+        fallbackMessages[error.code] ||
+        error.message,
+    );
+    e.status = error.response?.status;
+    e.code = error.response?.data?.error?.code;
+    return Promise.reject(e);
+  },
+);
+const percent = (event) =>
+  Math.min(100, Math.floor((event.loaded / event.total) * 100));
+// Upload IDs with a request in flight. If the page is closed or reloaded, the
+// browser drops those requests; a beacon also asks the server to stop them.
+const inflight = new Set();
+const cancelPath = (id) => `/videos/upload/${id}/cancel`;
+if (typeof window !== "undefined")
+  window.addEventListener("pagehide", () => {
+    for (const id of inflight)
+      navigator.sendBeacon?.(`${http.defaults.baseURL}${cancelPath(id)}`);
+  });
+export const api = {
+  me: () => http.get("/auth/me"),
+  login: (email, password) => http.post("/auth/login", { email, password }),
+  logout: () => http.post("/auth/logout"),
+  list: (params) => http.get("/videos", { params }),
+  details: (id) => http.get(`/videos/${id}`),
+  play: (id) => http.get(`/videos/${id}/play`),
+  download: (id) => http.get(`/videos/${id}/download`),
+  remove: (id) => http.delete(`/videos/${id}`),
+  favorite: (id, favorite) => http.patch(`/videos/${id}`, { favorite }),
+  update: (id, metadata) => http.patch(`/videos/${id}`, metadata),
+  // Progress covers the transfer. At 100% the server is still preparing the
+  // video and thumbnail; the request resolves with { video, warning } when both are stored.
+  upload(file, metadata, progress, signal) {
+    const uploadId = crypto.randomUUID();
+    const form = new FormData();
+    form.append("file", file, file.name);
+    form.append("duration", String(metadata.duration || 0));
+    // Aborting stops the transfer. The explicit cancel also stops server work a
+    // proxy may keep running, and removes an upload that finished just before.
+    signal?.addEventListener(
+      "abort",
+      () => {
+        inflight.delete(uploadId);
+        http.post(cancelPath(uploadId)).catch(() => {});
+      },
+      { once: true },
+    );
+    inflight.add(uploadId);
+    return http
+      .post("/videos/upload", form, {
+        signal,
+        timeout: 0,
+        headers: { "X-Upload-Id": uploadId },
+        onUploadProgress: (event) => {
+          if (!event.total) return;
+          // The multipart body is a little larger than the file itself.
+          const ratio = Math.min(1, event.loaded / event.total);
+          progress(percent(event), Math.round(file.size * ratio));
+        },
+      })
+      .finally(() => inflight.delete(uploadId));
+  },
+  replaceThumbnail(id, file, progress) {
+    const form = new FormData();
+    form.append("thumbnail", file, file.name);
+    return http.put(`/videos/${id}/thumbnail`, form, {
+      timeout: 120000,
+      onUploadProgress: (event) => {
+        if (event.total) progress?.(percent(event));
+      },
+    });
+  },
+};
+export function formatBytes(bytes, decimals = 1) {
+  if (!bytes) return "0 MB";
+  const unit = Math.max(
+    0,
+    Math.min(4, Math.floor(Math.log(bytes) / Math.log(1024))),
+  );
+  return `${(bytes / 1024 ** unit).toFixed(unit > 1 ? decimals : 0)} ${["B", "KB", "MB", "GB", "TB"][unit]}`;
+}
+export const formatDuration = (s = 0) =>
+  `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+export const formatDate = (d) =>
+  new Date(d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+export async function inspectVideo(file) {
+  const header = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  if (
+    header.length < 16 ||
+    String.fromCharCode(...header.slice(4, 8)) !== "ftyp"
+  )
+    throw new Error(`${file.name} is not a valid MP4 file.`);
+  return new Promise((resolve) => {
+    const video = document.createElement("video"),
+      url = URL.createObjectURL(file);
+    video.muted = true;
+    video.preload = "auto";
+    video.src = url;
+    const done = (metadata) => {
+      clearTimeout(timer);
+      video.onerror = null;
+      video.onloadeddata = null;
+      URL.revokeObjectURL(url);
+      video.removeAttribute("src");
+      video.load();
+      resolve(metadata);
+    };
+    const timer = setTimeout(() => done({ duration: 0 }), 8000);
+    video.onerror = () => done({ duration: 0 });
+    video.onloadeddata = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 640;
+      canvas.height =
+        Math.round((640 * video.videoHeight) / (video.videoWidth || 640)) ||
+        360;
+      canvas
+        .getContext("2d")
+        .drawImage(video, 0, 0, canvas.width, canvas.height);
+      done({
+        duration: Number.isFinite(video.duration) ? video.duration : 0,
+        poster: canvas.toDataURL("image/jpeg", 0.75),
+      });
+    };
+  });
+}
