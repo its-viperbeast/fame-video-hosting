@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "bun --watch server.js",
     "start": "bun server.js",
+    "start:prod": "pm2 start ecosystem.config.cjs",
     "test": "bun test --isolate ./test",
     "test:delete-live": "bun scripts/check-delete-flow.js",
     "password": "bun scripts/hash-password.js",
