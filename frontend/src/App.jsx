@@ -19,6 +19,7 @@ import VideoUpload from "./components/VideoUpload";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Upload from "./pages/Upload";
+import ChangePassword from "./pages/ChangePassword";
 
 const initialStats = {
   total: 0,
@@ -139,6 +140,7 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
         <main className="main-content" id="main-content" tabIndex={-1}>
           <Routes>
             <Route path="/upload" element={<Upload />} />
+            <Route path="/change-password" element={<ChangePassword />} />
             <Route
               path="/storage"
               element={<Navigate to="/videos" replace />}

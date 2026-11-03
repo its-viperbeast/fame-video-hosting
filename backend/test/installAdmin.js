@@ -9,6 +9,8 @@ export function installAdmin() {
     name: env.AUTH_EMAIL.split("@")[0],
     role: "admin",
     passwordHash: env.AUTH_PASSWORD_HASH,
+    sessionVersion: 0,
+    async save() {},
   };
   mock.method(Admin, "findOne", (filter = {}) => {
     const email = String(filter.email || "").toLowerCase();
@@ -17,4 +19,5 @@ export function installAdmin() {
     query.select = () => query;
     return query;
   });
+  return admin;
 }

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
+import { randomBytes, scryptSync } from "node:crypto";
 import { z } from "zod";
 import { env } from "../config/env.js";
 import Admin from "../models/Admin.js";
@@ -43,19 +44,67 @@ router.post(
         "Email or password is incorrect.",
         "INVALID_CREDENTIALS",
       );
-    const token = jwt.sign({ role: admin.role }, env.SESSION_SECRET, {
-      subject: admin.email,
-      expiresIn: "8h",
-      audience: "frame-api",
-      issuer: "frame",
-      algorithm: "HS256",
-    });
+    const token = jwt.sign(
+      { role: admin.role, sessionVersion: admin.sessionVersion ?? 0 },
+      env.SESSION_SECRET,
+      {
+        subject: admin.email,
+        expiresIn: "8h",
+        audience: "frame-api",
+        issuer: "frame",
+        algorithm: "HS256",
+      },
+    );
     res.cookie("frame_session", token, cookieOptions);
     ok(res, { user: publicAdmin(admin) });
   }),
 );
 router.get("/me", requireAuth, (req, res) =>
   ok(res, { user: publicAdmin(req.user) }),
+);
+router.post(
+  "/change-password",
+  requireAuth,
+  wrap(async (req, res) => {
+    const input = z
+      .object({
+        currentPassword: z.string().min(1).max(256),
+        newPassword: z.string().min(12).max(256),
+      })
+      .parse(req.body);
+    const admin = await Admin.findOne({ email: req.user.email }).select(
+      "+passwordHash",
+    );
+    if (!admin || !verifyPassword(input.currentPassword, admin.passwordHash))
+      throw new HttpError(
+        401,
+        "Current password is incorrect.",
+        "INVALID_CREDENTIALS",
+      );
+    if (input.currentPassword === input.newPassword)
+      throw new HttpError(
+        400,
+        "Choose a different password.",
+        "VALIDATION_ERROR",
+      );
+    const salt = randomBytes(16).toString("hex");
+    admin.passwordHash = `${salt}:${scryptSync(input.newPassword, salt, 64).toString("hex")}`;
+    admin.sessionVersion = (admin.sessionVersion ?? 0) + 1;
+    await admin.save();
+    const token = jwt.sign(
+      { role: admin.role, sessionVersion: admin.sessionVersion },
+      env.SESSION_SECRET,
+      {
+        subject: admin.email,
+        expiresIn: "8h",
+        audience: "frame-api",
+        issuer: "frame",
+        algorithm: "HS256",
+      },
+    );
+    res.cookie("frame_session", token, cookieOptions);
+    ok(res, { changed: true });
+  }),
 );
 router.post("/logout", (_req, res) => {
   const { maxAge, ...options } = cookieOptions;

@@ -43,6 +43,8 @@ if (typeof window !== "undefined")
 export const api = {
   me: () => http.get("/auth/me"),
   login: (email, password) => http.post("/auth/login", { email, password }),
+  changePassword: (currentPassword, newPassword) =>
+    http.post("/auth/change-password", { currentPassword, newPassword }),
   logout: () => http.post("/auth/logout"),
   list: (params) => http.get("/videos", { params }),
   details: (id) => http.get(`/videos/${id}`),

@@ -25,7 +25,8 @@ export async function requireAuth(req, _res, next) {
     const admin =
       user.role === "admin" &&
       (await Admin.findOne({ email: String(user.sub || "").toLowerCase() }));
-    if (!admin) throw new Error("Unauthorized");
+    if (!admin || (user.sessionVersion ?? 0) !== (admin.sessionVersion ?? 0))
+      throw new Error("Unauthorized");
     req.user = {
       id: admin.email,
       email: admin.email,

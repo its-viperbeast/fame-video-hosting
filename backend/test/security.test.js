@@ -31,7 +31,7 @@ const { default: Video } = await import("../models/Video.js");
 const { default: Admin } = await import("../models/Admin.js");
 const { default: StorageCleanup } = await import("../models/StorageCleanup.js");
 const { installAdmin } = await import("./installAdmin.js");
-installAdmin();
+const admin = installAdmin();
 const origin = "http://localhost:5173";
 function cookie(payload = { role: "admin" }, options = {}) {
   return `frame_session=${jwt.sign(payload, process.env.SESSION_SECRET, { subject: "admin@example.com", audience: "frame-api", issuer: "frame", expiresIn: "1h", ...options })}`;
@@ -79,6 +79,41 @@ test("login issues an HttpOnly session, rejects bad credentials, and supports lo
     200,
   );
   assert.equal((await agent.get("/api/auth/me")).status, 401);
+});
+test("changing the password verifies the old password and revokes old sessions", async () => {
+  const agent = request.agent(app);
+  const login = await agent
+    .post("/api/auth/login")
+    .set("Origin", origin)
+    .send({ email: "admin@example.com", password: "correct-test-password" });
+  const oldCookie = login.headers["set-cookie"][0].split(";")[0];
+  try {
+    const changed = await agent
+      .post("/api/auth/change-password")
+      .set("Origin", origin)
+      .send({
+        currentPassword: "correct-test-password",
+        newPassword: "a-new-test-password",
+      });
+    assert.equal(changed.status, 200);
+    assert.equal(
+      (await request(app).get("/api/auth/me").set("Cookie", oldCookie)).status,
+      401,
+    );
+    assert.equal((await agent.get("/api/auth/me")).status, 200);
+    assert.equal(
+      (
+        await request(app)
+          .post("/api/auth/login")
+          .set("Origin", origin)
+          .send({ email: "admin@example.com", password: "a-new-test-password" })
+      ).status,
+      200,
+    );
+  } finally {
+    admin.passwordHash = process.env.AUTH_PASSWORD_HASH;
+    admin.sessionVersion = 0;
+  }
 });
 test("cross-origin and missing-origin mutations are blocked", async () => {
   for (const value of [undefined, "https://attacker.example"]) {

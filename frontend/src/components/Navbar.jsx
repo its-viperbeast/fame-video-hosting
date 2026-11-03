@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   Cloud,
   CloudUpload,
+  KeyRound,
   FolderOpen,
   LayoutGrid,
   LogOut,
@@ -67,6 +68,12 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
       label: "Upload videos",
       active: pathname === "/upload",
     },
+    {
+      to: "/change-password",
+      icon: KeyRound,
+      label: "Change password",
+      active: pathname === "/change-password",
+    },
   ];
 
   return (
@@ -125,11 +132,7 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
               <strong>{formatBytes(stats.size, 2)}</strong> used
             </p>
           </div>
-          <button
-            className="help-link"
-            aria-pressed={dark}
-            onClick={onTheme}
-          >
+          <button className="help-link" aria-pressed={dark} onClick={onTheme}>
             {dark ? <Sun size={18} /> : <Moon size={18} />}
             <span>{dark ? "Light mode" : "Dark mode"}</span>
           </button>

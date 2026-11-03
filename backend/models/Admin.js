@@ -18,6 +18,7 @@ const schema = new mongoose.Schema(
       match: /^[a-f0-9]{32}:[a-f0-9]{128}$/,
     },
     role: { type: String, enum: ["admin"], default: "admin" },
+    sessionVersion: { type: Number, default: 0 },
   },
   { timestamps: true, versionKey: false },
 );
