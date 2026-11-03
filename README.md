@@ -107,9 +107,9 @@ bun run build
 bun run preview
 ```
 
-Serve `frontend/dist` from a static host with SPA fallback to `index.html`. Deploy the Express API independently with Bun, on a host that can reach MongoDB and Backblaze B2. Use HTTPS, `NODE_ENV=production`, the exact production `FRONTEND_URL`, and your production API address. Host frontend and API on the **same site**, e.g. `app.example.com` and `api.example.com`, or reverse-proxy `/api`; the session cookie uses SameSite=Lax. Unrelated hosting domains require a deliberate cookie/CSRF policy change. If a trusted reverse proxy terminates TLS, set `TRUST_PROXY` to the exact trusted hop count. Do not blindly trust client-supplied forwarding headers.
+Serve `frontend/dist` from a static host with SPA fallback to `index.html`. Deploy the Express API independently with Bun, on a host that can reach MongoDB and Backblaze B2. Use HTTPS, `NODE_ENV=production`, the exact production `FRONTEND_URL`, and your production API address. The frontend keeps its signed JWT and sends it in the `Authorization: Bearer` header, so only the origins in `FRONTEND_URL` may call the API; unrelated hosting domains must be added to CORS explicitly. If a trusted reverse proxy terminates TLS, set `TRUST_PROXY` to the exact trusted hop count. Do not blindly trust client-supplied forwarding headers.
 
-`APP_BASE_URL` records the backend's external origin. `FRONTEND_URL` is the browser origin allowed by CORS and the origin check.
+`APP_BASE_URL` records the backend's external origin. `FRONTEND_URL` is the browser origin allowed by CORS.
 
 ## Features
 
@@ -121,7 +121,7 @@ Serve `frontend/dist` from a static host with SPA fallback to `index.html`. Depl
 - Owner-scoped management endpoints, search by escaped literal filename, server sorting/pagination, refresh, favorites, total storage and recent-upload statistics.
 - Native HTML5 playback controls: play/pause, seeking, volume, and fullscreen, plus a responsive player modal, loading/error feedback, automatic URL renewal, and position restoration.
 - Download links, deletion confirmation and bulk deletion, skeletons, empty states, a simplified mobile sidebar, keyboard navigation, modal focus trapping, and persisted dark/light mode.
-- Single-administrator authentication with an HttpOnly, SameSite session cookie. Every video query is scoped to the authenticated owner. Login and API rate limits, Helmet headers, strict request validation, origin-based CSRF checks, safe JSON errors, and startup configuration validation.
+- Single-administrator authentication with a signed JWT returned at login and sent on every request as an `Authorization: Bearer` header. Every video query is scoped to the authenticated owner. Login and API rate limits, Helmet headers, strict request validation, safe JSON errors, and startup configuration validation.
 
 ## Architecture and upload flow
 
@@ -141,7 +141,7 @@ shubh-stream/
 ├── backend/
 │   ├── config/         # Validated environment, AWS SDK and MongoDB
 │   ├── controllers/
-│   ├── middleware/     # Session, origin checks and errors
+│   ├── middleware/     # Bearer-token auth and error handling
 │   ├── models/         # Video and Upload
 │   ├── routes/
 │   ├── scripts/        # Interactive password hashing
@@ -164,7 +164,7 @@ The workspace root is the `video-manager/` project described in the brief; front
 5. If only the thumbnail fails, the playable video is still saved and the response carries a `warning`. The panel shows it and offers a custom thumbnail.
 6. React refreshes the collection. Playback, download, and thumbnail URLs are returned only to the signed-in owner. They are short-lived signed URLs unless `MEDIA_BASE_URL` is set (see Public media links).
 
-**Cancelling.** Cancelling aborts the browser request and posts `/api/videos/upload/:uploadId/cancel`. If the page is reloaded or closed, a `pagehide` beacon posts the same cancel. Either a closed connection or the cancel stops the upload. During the transfer, the server drops the request and Multer deletes the partial file. During processing, ffmpeg is killed and the B2 transfer is aborted. Any object already written is deleted through the cleanup journal, and temp files are removed. If the cancel arrives just after the server saved the video, the video is deleted, because the client never showed it as completed. Queued files are never sent. Uploads in this flow are single PUTs, so there are no multipart uploads to abort. The cancel registry is per process: with several API processes, only the connection close reaches a different process.
+**Cancelling.** Cancelling aborts the browser request and posts `/api/videos/upload/:uploadId/cancel`. If the page is reloaded or closed, a `pagehide` keepalive request posts the same cancel. Either a closed connection or the cancel stops the upload. During the transfer, the server drops the request and Multer deletes the partial file. During processing, ffmpeg is killed and the B2 transfer is aborted. Any object already written is deleted through the cleanup journal, and temp files are removed. If the cancel arrives just after the server saved the video, the video is deleted, because the client never showed it as completed. Queued files are never sent. Uploads in this flow are single PUTs, so there are no multipart uploads to abort. The cancel registry is per process: with several API processes, only the connection close reaches a different process.
 
 Video metadata includes ID, name, unique video and thumbnail object keys (server-only), size, MIME type, upload date, owner, duration, and favorite state. Duration is client-reported display metadata; storage size and container checks are verified by the backend. Cards show the stored thumbnail. Videos uploaded before thumbnails existed fall back to an authorized preview frame until a custom thumbnail is added.
 
@@ -192,13 +192,13 @@ All responses use one of:
 }
 ```
 
-Success payloads below are inside `data`. Typical errors are 400 validation, 401 authentication, 403 origin, 404 missing/expired or unowned resources, 409 concurrent upload state, 413 size limits, 415 invalid MP4, 422 object mismatch, 429 rate limiting, and safe 500 upstream/service failures. Rate limit responses use the same success/error envelope, without request IDs.
+Success payloads below are inside `data`. Typical errors are 400 validation, 401 authentication, 404 missing/expired or unowned resources, 409 concurrent upload state, 413 size limits, 415 invalid MP4, 422 object mismatch, 429 rate limiting, and safe 500 upstream/service failures. Rate limit responses use the same success/error envelope, without request IDs.
 
 | Method | Endpoint                              | Access / purpose                                       |
 | ------ | ------------------------------------- | ------------------------------------------------------ |
-| POST   | `/api/auth/login`                     | Public, rate limited; create cookie session            |
+| POST   | `/api/auth/login`                     | Public, rate limited; returns a bearer token           |
 | GET    | `/api/auth/me`                        | Current authenticated administrator                    |
-| POST   | `/api/auth/logout`                    | Clear session cookie                                   |
+| POST   | `/api/auth/logout`                    | Acknowledges sign-out; the client drops its token      |
 | POST   | `/api/videos/upload`                  | Authenticated, multipart `file` + `duration`; store video and thumbnail |
 | POST   | `/api/videos/upload/:uploadId/cancel` | Authenticated; stop that upload, or remove it if it just finished |
 | POST   | `/api/videos/validate`                | Authenticated, multipart `header` sample ≤4 KiB        |
@@ -213,11 +213,10 @@ Success payloads below are inside `data`. Typical errors are 400 validation, 401
 
 ### Authentication example
 
-All mutations, including CLI requests, must include the configured frontend Origin because sessions are cookie-based:
+Sign in to get a signed JWT, then send it as `Authorization: Bearer <token>` on every authenticated request:
 
 ```sh
-curl -c /tmp/frame-cookies.txt -X POST http://localhost:9090/api/auth/login \
-  -H 'Origin: http://localhost:5173' \
+curl -X POST http://localhost:9090/api/auth/login \
   -H 'Content-Type: application/json' \
   --data '{"email":"admin@example.com","password":"your-admin-password"}'
 ```
@@ -228,10 +227,13 @@ Response:
 {
   "success": true,
   "data": {
-    "user": { "email": "admin@example.com", "name": "admin", "role": "admin" }
+    "user": { "email": "admin@example.com", "name": "admin", "role": "admin" },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
 }
 ```
+
+The token expires after eight hours. The examples below use `TOKEN` for the value from `data.token`.
 
 ### Saved video
 
@@ -257,9 +259,9 @@ Response:
 ### List, playback and download
 
 ```sh
-curl -b /tmp/frame-cookies.txt 'http://localhost:9090/api/videos?search=Alpine&sort=newest&page=1&limit=6&filter=all'
-curl -b /tmp/frame-cookies.txt http://localhost:9090/api/videos/VIDEO_ID/play
-curl -b /tmp/frame-cookies.txt http://localhost:9090/api/videos/VIDEO_ID/download
+curl -H "Authorization: Bearer $TOKEN" 'http://localhost:9090/api/videos?search=Alpine&sort=newest&page=1&limit=6&filter=all'
+curl -H "Authorization: Bearer $TOKEN" http://localhost:9090/api/videos/VIDEO_ID/play
+curl -H "Authorization: Bearer $TOKEN" http://localhost:9090/api/videos/VIDEO_ID/download
 ```
 
 List `data` contains `videos`, `pagination: {page, limit, total, pages}`, `stats: {total, size, favorites, recent}`, `maxUploadBytes`, and `maxThumbnailBytes`. Supported sorts: `newest`, `oldest`, `name`, `size`. Supported filters: `all`, `recent` (24 hours), and `favorites`. Maximum page size is 48. Search treats regex characters literally.
@@ -288,8 +290,8 @@ Download URLs use `Content-Disposition: attachment` with an encoded filename. Th
 Use the video card menu to choose **Rename video** or **Add note** / **Edit note**. Notes appear on the video card; clear a note and save to remove it. Names and notes are saved only in MongoDB. Renaming does not move, copy, or rewrite the stored video or thumbnail.
 
 ```sh
-curl -b /tmp/frame-cookies.txt -X PATCH http://localhost:9090/api/videos/VIDEO_ID \
-  -H 'Origin: http://localhost:5173' -H 'Content-Type: application/json' \
+curl -X PATCH http://localhost:9090/api/videos/VIDEO_ID \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"name":"Wedding highlights","note":"Review the ending."}'
 ```
 
@@ -298,8 +300,8 @@ The PATCH endpoint accepts any nonempty combination of `name` (1–180 character
 ### Delete
 
 ```sh
-curl -b /tmp/frame-cookies.txt -X DELETE http://localhost:9090/api/videos/VIDEO_ID \
-  -H 'Origin: http://localhost:5173'
+curl -X DELETE http://localhost:9090/api/videos/VIDEO_ID \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 Response: `{"success":true,"data":{"deleted":true,"id":"VIDEO_ID"}}`.
@@ -330,7 +332,7 @@ cd ../backend
 bun run test
 ```
 
-The frontend tests verify bounded concurrent uploads, independent progress, failure isolation, retries during active uploads, queued-file removal, aborting transfers on cleanup, processing and cancelled states, cancel all, retry after cancel, byte-weighted overall progress, thumbnail file checks, and delete retries. The backend tests cover authentication, session permissions and expiry, CSRF/origin checks, ownership scoping, strict metadata validation, safe error envelopes, MP4 signatures, Multer buffer limits, exact object verification, and conditional signed PUTs. They also cover 1080p WebP letterboxing, content-based image validation, thumbnail replacement ordering, failed and racing replacements, deletion with missing objects and partial failures, upload rollback, cancelling during transfer and processing, cancels that race with completion, and the cleanup worker. The ingest and frame tests run the local ffmpeg and are skipped without it. These tests do not require live MongoDB or incur S3 costs. A real B2/MongoDB integration smoke test still requires your own configured services.
+The frontend tests verify bounded concurrent uploads, independent progress, failure isolation, retries during active uploads, queued-file removal, aborting transfers on cleanup, processing and cancelled states, cancel all, retry after cancel, byte-weighted overall progress, thumbnail file checks, and delete retries. The backend tests cover authentication, bearer-token permissions and expiry, ownership scoping, strict metadata validation, safe error envelopes, MP4 signatures, Multer buffer limits, exact object verification, and conditional signed PUTs. They also cover 1080p WebP letterboxing, content-based image validation, thumbnail replacement ordering, failed and racing replacements, deletion with missing objects and partial failures, upload rollback, cancelling during transfer and processing, cancels that race with completion, and the cleanup worker. The ingest and frame tests run the local ffmpeg and are skipped without it. These tests do not require live MongoDB or incur S3 costs. A real B2/MongoDB integration smoke test still requires your own configured services.
 
 For that smoke test: sign in and upload an MP4. Check that `videos/<uuid>.mp4` holds the full file (not 170 bytes of XML) and that `thumbnail/<uuid>.webp` is 1920 × 1080. Replace the thumbnail from the card menu and confirm the old `thumbnail/` object is gone. Try a renamed non-image and confirm the current thumbnail stays. Play, seek, and download. Delete the video and confirm both objects and the record are removed. Check playback renewal with a short configured URL TTL. Verify that anonymous management requests are rejected and that a renamed non-MP4 file cannot complete verification.
 
@@ -344,7 +346,7 @@ For an opt-in check against the configured real services, run `cd backend` then 
 - Storage writes and MongoDB commits cannot share a transaction. Every object key is recorded in the `storagecleanups` collection before it is written. A cleanup worker in each API process runs at startup and every five minutes. It deletes tracked objects that no ready video references once they are due (24 hours for in-flight uploads, five minutes for failed cleanups). It finishes deletions stuck in `deleting` for over ten minutes and removes upload temp files older than a day. A crash at any point therefore leaves at most a tracked object that is removed later. Workers in several processes claim entries atomically. The presigned flow keeps its conditional writes, completion leases, and idempotent upserts. B2 lifecycle rules should still abort incomplete multipart uploads.
 - Configure an AWS budget and alerts. Signed content lengths and verification enforce per-file limits. Storage is not capped by the API.
 - Apply stricter upload-creation budgets if exposed to more administrators. Replace in-memory rate-limit storage with a shared store when running multiple API processes.
-- Session logout clears the browser cookie; existing JWTs expire after eight hours. Rotate the session secret to invalidate all sessions. Use a revocable session store if immediate per-session revocation is required.
+- Signing out drops the stored token in the client; existing JWTs stay valid until they expire after eight hours. Rotate the session secret to invalidate all sessions. Use a revocable session store if immediate per-session revocation is required.
 - The app does not provide third-party billing or subscription upgrades. The Free/100 GB labels describe the starter's display configuration.
-- Restrict API access logs so cookies and presigned URLs are never logged. Treat playback URLs as bearer credentials; with `MEDIA_BASE_URL` they never expire.
+- Restrict API access logs so bearer tokens and presigned URLs are never logged. Treat playback URLs as bearer credentials; with `MEDIA_BASE_URL` they never expire.
 - Font files and demo poster images load from Google Fonts and Unsplash. Host approved assets yourself when your deployment requires no third-party asset requests. The bundled `frontend/public/sample.mp4` is the [MDN CC0 flower video](https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4). All sample cards use this same illustrative clip.

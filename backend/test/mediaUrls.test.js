@@ -29,7 +29,7 @@ installAdmin();
 
 const owner = "admin@example.com";
 const id = "012345678901234567890123";
-const cookie = `frame_session=${jwt.sign({ role: "admin" }, process.env.SESSION_SECRET, { subject: owner, audience: "frame-api", issuer: "frame", expiresIn: "1h" })}`;
+const auth = `Bearer ${jwt.sign({ role: "admin" }, process.env.SESSION_SECRET, { subject: owner, audience: "frame-api", issuer: "frame", expiresIn: "1h" })}`;
 const video = {
   _id: id,
   id,
@@ -71,13 +71,13 @@ test("the play endpoint returns the public link only for the owner's video", asy
   });
   const res = await request(app)
     .get(`/api/videos/${id}/play`)
-    .set("Cookie", cookie);
+    .set("Authorization", auth);
   assert.equal(res.status, 200);
   assert.equal(res.body.data.url, `https://media.example.com/${video.key}`);
   assert.equal(filter.owner, owner);
   const other = await request(app)
     .get("/api/videos/111111111111111111111111/play")
-    .set("Cookie", cookie);
+    .set("Authorization", auth);
   assert.equal(other.status, 404);
   const anonymous = await request(app).get(`/api/videos/${id}/play`);
   assert.equal(anonymous.status, 401);
@@ -93,7 +93,7 @@ test("library responses carry the public thumbnail link", async (t) => {
   t.mock.method(Video, "find", () => chain);
   t.mock.method(Video, "countDocuments", async () => 1);
   t.mock.method(Video, "aggregate", async () => [{ total: 1, size: 10 }]);
-  const res = await request(app).get("/api/videos").set("Cookie", cookie);
+  const res = await request(app).get("/api/videos").set("Authorization", auth);
   assert.equal(res.status, 200);
   assert.equal(
     res.body.data.videos[0].thumbnailUrl,

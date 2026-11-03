@@ -41,7 +41,7 @@ const { uploadDir } = await import("../routes/videoRoutes.js");
 const origin = "http://localhost:5173";
 const owner = "admin@example.com";
 const id = "012345678901234567890123";
-const cookie = `frame_session=${jwt.sign({ role: "admin" }, process.env.SESSION_SECRET, { subject: owner, audience: "frame-api", issuer: "frame", expiresIn: "1h" })}`;
+const auth = `Bearer ${jwt.sign({ role: "admin" }, process.env.SESSION_SECRET, { subject: owner, audience: "frame-api", issuer: "frame", expiresIn: "1h" })}`;
 const hasFfmpeg = (() => {
   try {
     execFileSync("ffmpeg", ["-version"], { stdio: "ignore" });
@@ -366,7 +366,7 @@ function replaceHarness(t, options) {
   const send = (image, name = "cover.png", type = "image/png") =>
     request(app)
       .put(`/api/videos/${id}/thumbnail`)
-      .set("Cookie", cookie)
+      .set("Authorization", auth)
       .set("Origin", origin)
       .attach("thumbnail", image, { filename: name, contentType: type });
   return { ...storage, state, send, ownerFilter: () => ownerFilter };
@@ -437,7 +437,7 @@ test("invalid or unowned replacements are rejected before anything is stored", a
   assert.equal(svg.status, 415);
   const missing = await request(app)
     .put("/api/videos/111111111111111111111111/thumbnail")
-    .set("Cookie", cookie)
+    .set("Authorization", auth)
     .set("Origin", origin)
     .attach("thumbnail", await solid(800, 800, "#000"), "cover.png");
   assert.equal(missing.status, 404);
@@ -479,7 +479,7 @@ function deleteHarness(t, options) {
   const send = () =>
     request(app)
       .delete(`/api/videos/${id}`)
-      .set("Cookie", cookie)
+      .set("Authorization", auth)
       .set("Origin", origin);
   return { ...storage, record, send, filter: () => filter };
 }
@@ -545,7 +545,7 @@ function ingestHarness(t, options = {}) {
   const send = (file) =>
     request(app)
       .post("/api/videos/upload")
-      .set("Cookie", cookie)
+      .set("Authorization", auth)
       .set("Origin", origin)
       .field("duration", "2")
       .attach("file", file, "Clip.mp4");

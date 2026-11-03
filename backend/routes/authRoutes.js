@@ -5,11 +5,7 @@ import { randomBytes, scryptSync } from "node:crypto";
 import { z } from "zod";
 import { env } from "../config/env.js";
 import Admin from "../models/Admin.js";
-import {
-  requireAuth,
-  verifyPassword,
-  cookieOptions,
-} from "../middleware/auth.js";
+import { requireAuth, verifyPassword } from "../middleware/auth.js";
 import { publicAdmin } from "../services/adminService.js";
 import { ok, wrap, HttpError } from "../utils/http.js";
 const router = Router();
@@ -55,8 +51,7 @@ router.post(
         algorithm: "HS256",
       },
     );
-    res.cookie("frame_session", token, cookieOptions);
-    ok(res, { user: publicAdmin(admin) });
+    ok(res, { user: publicAdmin(admin), token });
   }),
 );
 router.get("/me", requireAuth, (req, res) =>
@@ -102,13 +97,10 @@ router.post(
         algorithm: "HS256",
       },
     );
-    res.cookie("frame_session", token, cookieOptions);
-    ok(res, { changed: true });
+    ok(res, { changed: true, token });
   }),
 );
-router.post("/logout", (_req, res) => {
-  const { maxAge, ...options } = cookieOptions;
-  res.clearCookie("frame_session", options);
-  ok(res, { loggedOut: true });
-});
+// Tokens are stateless and carried by the client, so signing out only drops the
+// stored token there. The endpoint is kept so the client can acknowledge it.
+router.post("/logout", (_req, res) => ok(res, { loggedOut: true }));
 export default router;

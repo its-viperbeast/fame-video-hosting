@@ -231,16 +231,10 @@ function Root() {
     };
   }, []);
 
-  const signedOut = useCallback(() => setAuth("out"), []);
-
-  async function signOut() {
-    try {
-      await api.logout();
-    } catch {
-      // The session is cleared client-side even if the request cannot complete.
-    }
-    signedOut();
-  }
+  const signedOut = useCallback(() => {
+    api.logout();
+    setAuth("out");
+  }, []);
 
   return (
     <>
@@ -276,7 +270,7 @@ function Root() {
                   dark={dark}
                   onTheme={() => setDark(!dark)}
                   onSignedOut={signedOut}
-                  onLogout={signOut}
+                  onLogout={signedOut}
                 />
               ) : (
                 <Navigate to="/login" replace />

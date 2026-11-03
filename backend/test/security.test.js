@@ -33,8 +33,8 @@ const { default: StorageCleanup } = await import("../models/StorageCleanup.js");
 const { installAdmin } = await import("./installAdmin.js");
 const admin = installAdmin();
 const origin = "http://localhost:5173";
-function cookie(payload = { role: "admin" }, options = {}) {
-  return `frame_session=${jwt.sign(payload, process.env.SESSION_SECRET, { subject: "admin@example.com", audience: "frame-api", issuer: "frame", expiresIn: "1h", ...options })}`;
+function auth(payload = { role: "admin" }, options = {}) {
+  return `Bearer ${jwt.sign(payload, process.env.SESSION_SECRET, { subject: "admin@example.com", audience: "frame-api", issuer: "frame", expiresIn: "1h", ...options })}`;
 }
 function mp4() {
   const b = Buffer.alloc(24);
@@ -59,53 +59,65 @@ test("all management endpoints reject anonymous requests", async () => {
     assert.equal(res.body.error.code, "UNAUTHORIZED");
   }
 });
-test("login issues an HttpOnly session, rejects bad credentials, and supports logout", async () => {
-  const agent = request.agent(app);
-  const bad = await agent
+test("login returns a bearer token, rejects bad credentials, and supports logout", async () => {
+  const bad = await request(app)
     .post("/api/auth/login")
-    .set("Origin", origin)
     .send({ email: "admin@example.com", password: "incorrect" });
   assert.equal(bad.status, 401);
-  const login = await agent
+  const login = await request(app)
     .post("/api/auth/login")
-    .set("Origin", origin)
     .send({ email: "admin@example.com", password: "correct-test-password" });
   assert.equal(login.status, 200);
-  assert.match(login.headers["set-cookie"][0], /HttpOnly/);
-  assert.match(login.headers["set-cookie"][0], /SameSite=Lax/);
-  assert.equal((await agent.get("/api/auth/me")).status, 200);
+  assert.equal(typeof login.body.data.token, "string");
+  // No cookie is set any more; the token is returned in the body instead.
+  assert.equal(login.headers["set-cookie"], undefined);
+  const header = `Bearer ${login.body.data.token}`;
   assert.equal(
-    (await agent.post("/api/auth/logout").set("Origin", origin)).status,
+    (await request(app).get("/api/auth/me").set("Authorization", header)).status,
     200,
   );
-  assert.equal((await agent.get("/api/auth/me")).status, 401);
+  assert.equal(
+    (
+      await request(app)
+        .post("/api/auth/logout")
+        .set("Authorization", header)
+    ).status,
+    200,
+  );
 });
 test("changing the password verifies the old password and revokes old sessions", async () => {
-  const agent = request.agent(app);
-  const login = await agent
+  const login = await request(app)
     .post("/api/auth/login")
-    .set("Origin", origin)
     .send({ email: "admin@example.com", password: "correct-test-password" });
-  const oldCookie = login.headers["set-cookie"][0].split(";")[0];
+  const oldHeader = `Bearer ${login.body.data.token}`;
   try {
-    const changed = await agent
+    const changed = await request(app)
       .post("/api/auth/change-password")
-      .set("Origin", origin)
+      .set("Authorization", oldHeader)
       .send({
         currentPassword: "correct-test-password",
         newPassword: "a-new-test-password",
       });
     assert.equal(changed.status, 200);
+    // The rotated session version invalidates the previous token.
     assert.equal(
-      (await request(app).get("/api/auth/me").set("Cookie", oldCookie)).status,
+      (
+        await request(app).get("/api/auth/me").set("Authorization", oldHeader)
+      ).status,
       401,
     );
-    assert.equal((await agent.get("/api/auth/me")).status, 200);
+    assert.equal(
+      (
+        await request(app)
+          .get("/api/auth/me")
+          .set("Authorization", `Bearer ${changed.body.data.token}`)
+      ).status,
+      200,
+    );
     assert.equal(
       (
         await request(app)
           .post("/api/auth/login")
-          .set("Origin", origin)
           .send({ email: "admin@example.com", password: "a-new-test-password" })
       ).status,
       200,
@@ -115,28 +127,16 @@ test("changing the password verifies the old password and revokes old sessions",
     admin.sessionVersion = 0;
   }
 });
-test("cross-origin and missing-origin mutations are blocked", async () => {
-  for (const value of [undefined, "https://attacker.example"]) {
-    let req = request(app)
-      .post("/api/auth/logout")
-      .set("Cookie", cookie())
-      .send({});
-    if (value) req = req.set("Origin", value);
-    const result = await req;
-    assert.equal(result.status, 403);
-    assert.equal(result.body.error.code, "INVALID_ORIGIN");
-  }
-});
 test("wrong role, owner, audience, and expired sessions are rejected", async () => {
-  const cookies = [
-    cookie({ role: "viewer" }),
-    cookie({ role: "admin" }, { subject: "other@example.com" }),
-    cookie({ role: "admin" }, { audience: "other-app" }),
-    cookie({ role: "admin" }, { expiresIn: -1 }),
+  const headers = [
+    auth({ role: "viewer" }),
+    auth({ role: "admin" }, { subject: "other@example.com" }),
+    auth({ role: "admin" }, { audience: "other-app" }),
+    auth({ role: "admin" }, { expiresIn: -1 }),
   ];
-  for (const value of cookies)
+  for (const value of headers)
     assert.equal(
-      (await request(app).get("/api/auth/me").set("Cookie", value)).status,
+      (await request(app).get("/api/auth/me").set("Authorization", value)).status,
       401,
     );
 });
@@ -172,19 +172,19 @@ test("MP4 signature validation inspects the container and rejects forged files",
 test("Multer header validation checks bytes and caps buffered data at 4096 bytes", async () => {
   const good = await request(app)
     .post("/api/videos/validate")
-    .set("Cookie", cookie())
+    .set("Authorization", auth())
     .set("Origin", origin)
     .attach("header", mp4(), "sample.bin");
   assert.equal(good.status, 200);
   const bad = await request(app)
     .post("/api/videos/validate")
-    .set("Cookie", cookie())
+    .set("Authorization", auth())
     .set("Origin", origin)
     .attach("header", Buffer.from("not a video file"), "sample.bin");
   assert.equal(bad.status, 415);
   const large = await request(app)
     .post("/api/videos/validate")
-    .set("Cookie", cookie())
+    .set("Authorization", auth())
     .set("Origin", origin)
     .attach("header", Buffer.alloc(4097), "sample.bin");
   assert.equal(large.status, 413);
@@ -198,7 +198,7 @@ test("video access is scoped to the authenticated owner", async () => {
   try {
     const result = await request(app)
       .get("/api/videos/012345678901234567890123")
-      .set("Cookie", cookie());
+      .set("Authorization", auth());
     assert.equal(result.status, 404);
     assert.equal(query.owner, "admin@example.com");
     assert.equal(query.status, "ready");
@@ -232,7 +232,7 @@ test("renaming and notes update only the owner's ready video metadata without st
   });
   const patch = (body) => request(app)
     .patch(`/api/videos/${id}`)
-    .set("Cookie", cookie())
+    .set("Authorization", auth())
     .set("Origin", origin)
     .send(body);
   for (const body of [
@@ -267,7 +267,7 @@ test("metadata edits reject invalid fields and values before querying MongoDB", 
   ]) {
     const result = await request(app)
       .patch("/api/videos/012345678901234567890123")
-      .set("Cookie", cookie())
+      .set("Authorization", auth())
       .set("Origin", origin)
       .send(body);
     assert.equal(result.status, 400, JSON.stringify(body));
@@ -275,7 +275,7 @@ test("metadata edits reject invalid fields and values before querying MongoDB", 
   }
   const invalidId = await request(app)
     .patch("/api/videos/not-an-id")
-    .set("Cookie", cookie())
+    .set("Authorization", auth())
     .set("Origin", origin)
     .send({ name: "Title" });
   assert.equal(invalidId.status, 400);
@@ -288,23 +288,13 @@ test("metadata edits cannot change unowned, deleted, or deleting videos", async 
   });
   const result = await request(app)
     .patch("/api/videos/012345678901234567890123")
-    .set("Cookie", cookie())
+    .set("Authorization", auth())
     .set("Origin", origin)
     .send({ note: "Private note" });
   assert.equal(result.status, 404);
   assert.equal(result.body.error.code, "NOT_FOUND");
   assert.equal(filter.owner, "admin@example.com");
   assert.equal(filter.status, "ready");
-});
-test("metadata edits preserve origin protection", async () => {
-  for (const value of [undefined, "https://attacker.example"]) {
-    let req = request(app)
-      .patch("/api/videos/012345678901234567890123")
-      .set("Cookie", cookie())
-      .send({ name: "Title" });
-    if (value) req = req.set("Origin", value);
-    assert.equal((await req).status, 403);
-  }
 });
 test("all MongoDB models save without version keys and enforce note limits", async (t) => {
   const documents = [

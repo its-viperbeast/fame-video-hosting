@@ -1,11 +1,9 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
 import { env } from "./config/env.js";
-import { requireOrigin } from "./middleware/auth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { ok, HttpError } from "./utils/http.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -17,19 +15,17 @@ app.use(helmet());
 app.use(
   cors({
     origin: new URL(env.FRONTEND_URL).origin,
-    credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "X-Upload-Id"],
+    allowedHeaders: ["Content-Type", "X-Upload-Id", "Authorization"],
   }),
 );
-app.use(express.json({ limit: "32kb" }), cookieParser());
+app.use(express.json({ limit: "32kb" }));
 app.use(
   "/api",
   (_req, res, next) => {
     res.set("Cache-Control", "no-store");
     next();
   },
-  requireOrigin,
   rateLimit({
     windowMs: 60000,
     limit: 300,

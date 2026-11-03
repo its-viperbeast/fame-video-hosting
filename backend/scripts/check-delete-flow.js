@@ -102,10 +102,7 @@ try {
     `http://127.0.0.1:${server.address().port}/api/videos/${video.id}`,
     {
       method: "DELETE",
-      headers: {
-        Cookie: `frame_session=${token}`,
-        Origin: new URL(env.FRONTEND_URL).origin,
-      },
+      headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(60000),
     },
   );

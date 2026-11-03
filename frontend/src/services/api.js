@@ -1,8 +1,13 @@
 import axios from "axios";
+import { getToken, setToken, clearToken } from "./authToken";
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:9090/api",
-  withCredentials: true,
   timeout: 30000,
+});
+http.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
 });
 // Used when a proxy or timeout answers without the API's error envelope.
 const fallbackMessages = {
@@ -32,20 +37,39 @@ http.interceptors.response.use(
 const percent = (event) =>
   Math.min(100, Math.floor((event.loaded / event.total) * 100));
 // Upload IDs with a request in flight. If the page is closed or reloaded, the
-// browser drops those requests; a beacon also asks the server to stop them.
+// browser drops those requests; a keepalive request also asks the server to
+// stop them.
 const inflight = new Set();
 const cancelPath = (id) => `/videos/upload/${id}/cancel`;
 if (typeof window !== "undefined")
   window.addEventListener("pagehide", () => {
+    // sendBeacon cannot set an Authorization header, so use a keepalive fetch,
+    // which survives the page being unloaded.
+    const token = getToken();
     for (const id of inflight)
-      navigator.sendBeacon?.(`${http.defaults.baseURL}${cancelPath(id)}`);
+      fetch(`${http.defaults.baseURL}${cancelPath(id)}`, {
+        method: "POST",
+        keepalive: true,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).catch(() => {});
   });
 export const api = {
   me: () => http.get("/auth/me"),
-  login: (email, password) => http.post("/auth/login", { email, password }),
-  changePassword: (currentPassword, newPassword) =>
-    http.post("/auth/change-password", { currentPassword, newPassword }),
-  logout: () => http.post("/auth/logout"),
+  login: async (email, password) => {
+    const data = await http.post("/auth/login", { email, password });
+    setToken(data.token);
+    return data;
+  },
+  // Changing the password rotates the session, so the new token replaces the old.
+  changePassword: async (currentPassword, newPassword) => {
+    const data = await http.post("/auth/change-password", {
+      currentPassword,
+      newPassword,
+    });
+    if (data?.token) setToken(data.token);
+    return data;
+  },
+  logout: clearToken,
   list: (params) => http.get("/videos", { params }),
   details: (id) => http.get(`/videos/${id}`),
   play: (id) => http.get(`/videos/${id}/play`),

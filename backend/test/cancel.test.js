@@ -39,7 +39,7 @@ const { uploadDir } = await import("../routes/videoRoutes.js");
 
 const origin = "http://localhost:5173";
 const owner = "admin@example.com";
-const cookie = `frame_session=${jwt.sign({ role: "admin" }, process.env.SESSION_SECRET, { subject: owner, audience: "frame-api", issuer: "frame", expiresIn: "1h" })}`;
+const auth = `Bearer ${jwt.sign({ role: "admin" }, process.env.SESSION_SECRET, { subject: owner, audience: "frame-api", issuer: "frame", expiresIn: "1h" })}`;
 const hasFfmpeg = (() => {
   try {
     execFileSync("ffmpeg", ["-version"], { stdio: "ignore" });
@@ -176,12 +176,12 @@ function harness(t, { hold, onCreate } = {}) {
 const upload = (id) => {
   const req = request(app)
     .post("/api/videos/upload")
-    .set("Cookie", cookie)
+    .set("Authorization", auth)
     .set("Origin", origin);
   if (id) req.set("X-Upload-Id", id);
   return req.field("duration", "2").attach("file", clip, "Clip.mp4");
 };
-const cancel = (id, headers = { Cookie: cookie, Origin: origin }) => {
+const cancel = (id, headers = { Authorization: auth, Origin: origin }) => {
   const req = request(app).post(`/api/videos/upload/${id}/cancel`);
   for (const [name, value] of Object.entries(headers)) req.set(name, value);
   return req;
@@ -306,7 +306,7 @@ test(
         path: "/api/videos/upload",
         method: "POST",
         headers: {
-          Cookie: cookie,
+          Authorization: auth,
           Origin: origin,
           "X-Upload-Id": id,
           "Content-Type": `multipart/form-data; boundary=${boundary}`,
@@ -336,19 +336,14 @@ test(
 test("upload and cancel IDs are validated, and cancels require a session", async () => {
   const bad = await request(app)
     .post("/api/videos/upload")
-    .set("Cookie", cookie)
+    .set("Authorization", auth)
     .set("Origin", origin)
     .set("X-Upload-Id", "../../etc");
   assert.equal(bad.status, 400);
   assert.equal((await cancel("not-a-uuid")).status, 400);
   assert.equal((await cancel(randomUUID(), { Origin: origin })).status, 401);
   assert.equal(
-    (
-      await cancel(randomUUID(), {
-        Cookie: cookie,
-        Origin: "https://evil.example",
-      })
-    ).status,
-    403,
+    (await cancel(randomUUID(), { Authorization: auth })).status,
+    200,
   );
 });
