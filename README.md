@@ -262,7 +262,7 @@ curl -b /tmp/frame-cookies.txt http://localhost:5000/api/videos/VIDEO_ID/play
 curl -b /tmp/frame-cookies.txt http://localhost:5000/api/videos/VIDEO_ID/download
 ```
 
-List `data` contains `videos`, `pagination: {page, limit, total, pages}`, `stats: {total, size, favorites, recent}`, `maxUploadBytes`, and `maxThumbnailBytes`. Supported sorts: `newest`, `oldest`, `name`, `size`. Supported filters: `all`, `recent` (seven days), and `favorites`. Maximum page size is 48. Search treats regex characters literally.
+List `data` contains `videos`, `pagination: {page, limit, total, pages}`, `stats: {total, size, favorites, recent}`, `maxUploadBytes`, and `maxThumbnailBytes`. Supported sorts: `newest`, `oldest`, `name`, `size`. Supported filters: `all`, `recent` (24 hours), and `favorites`. Maximum page size is 48. Search treats regex characters literally.
 
 Playback/download `data`:
 
