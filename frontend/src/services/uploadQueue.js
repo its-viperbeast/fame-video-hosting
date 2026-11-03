@@ -24,12 +24,7 @@ export function createUploadQueue({
       const task = pending.shift();
       task.controller = new AbortController();
       active++;
-      onChange(task.item.id, {
-        status: "uploading",
-        progress: 0,
-        loaded: 0,
-        error: "",
-      });
+      onChange(task.item.id, { status: "uploading", progress: 0, loaded: 0, error: "" });
       void run(task);
     }
   }
@@ -96,12 +91,7 @@ export function createUploadQueue({
         const task = { item, controller: null };
         scheduled.set(item.id, task);
         pending.push(task);
-        onChange(item.id, {
-          status: "queued",
-          progress: 0,
-          loaded: 0,
-          error: "",
-        });
+        onChange(item.id, { status: "queued", progress: 0, loaded: 0, error: "" });
       }
       pump();
     },
@@ -153,11 +143,5 @@ export function overallProgress(items) {
     else if (item.status !== "queued") sent += size;
     if (item.status === "completed") completed++;
   }
-  return {
-    total,
-    sent,
-    count,
-    completed,
-    percent: total ? Math.floor((sent / total) * 100) : 0,
-  };
+  return { total, sent, count, completed, percent: total ? Math.floor((sent / total) * 100) : 0 };
 }

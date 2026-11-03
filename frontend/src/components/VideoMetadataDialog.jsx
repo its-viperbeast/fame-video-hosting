@@ -4,12 +4,7 @@ import { toast } from "react-toastify";
 import { api } from "../services/api";
 import Modal from "./Modal";
 
-export default function VideoMetadataDialog({
-  video,
-  field,
-  onClose,
-  onSaved,
-}) {
+export default function VideoMetadataDialog({ video, field, onClose, onSaved }) {
   const renaming = field === "name";
   const [value, setValue] = useState(video[field] || "");
   const [saving, setSaving] = useState(false);
@@ -23,9 +18,7 @@ export default function VideoMetadataDialog({
     setSaving(true);
     setError("");
     try {
-      const { video: updated } = await api.update(video.id, {
-        [field]: value.trim(),
-      });
+      const { video: updated } = await api.update(video.id, { [field]: value.trim() });
       toast.success(renaming ? "Video renamed" : "Note saved");
       onSaved(updated);
     } catch (err) {
@@ -51,19 +44,13 @@ export default function VideoMetadataDialog({
             form="video-metadata-form"
             disabled={saving || !changed || (renaming && !value.trim())}
           >
-            {saving ? (
-              <LoaderCircle className="spin" size={16} />
-            ) : (
-              <Save size={16} />
-            )}
+            {saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
             {saving ? "Saving…" : renaming ? "Save name" : "Save note"}
           </button>
         </>
       }
     >
-      <p className="modal-intro">
-        {renaming ? "Choose a name for your library." : video.name}
-      </p>
+      <p className="modal-intro">{renaming ? "Choose a name for your library." : video.name}</p>
       <form id="video-metadata-form" onSubmit={save}>
         <label className="field-label" htmlFor="video-metadata-value">
           {renaming ? "Video name" : "Note"}
@@ -93,9 +80,7 @@ export default function VideoMetadataDialog({
           />
         )}
         <p className="metadata-hint" id="video-metadata-hint">
-          {renaming
-            ? "Up to 180 characters."
-            : "Clear the text to remove the note."}
+          {renaming ? "Up to 180 characters." : "Clear the text to remove the note."}
           <span>
             {value.length.toLocaleString()} / {maxLength.toLocaleString()}
           </span>

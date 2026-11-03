@@ -15,10 +15,7 @@ export default [
     },
     plugins: { "react-hooks": reactHooks, "react-refresh": reactRefresh },
     rules: {
-      "no-unused-vars": [
-        "warn",
-        { varsIgnorePattern: "^[A-Z_]", argsIgnorePattern: "^_" },
-      ],
+      "no-unused-vars": ["warn", { varsIgnorePattern: "^[A-Z_]", argsIgnorePattern: "^_" }],
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
     },

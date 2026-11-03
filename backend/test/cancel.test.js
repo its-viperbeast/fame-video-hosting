@@ -2,13 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID, scryptSync } from "node:crypto";
-import {
-  chmodSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-} from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, readdirSync, statSync } from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -71,7 +65,9 @@ if (hasFfmpeg)
     "-y",
     clip,
   ]);
+
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function settledTemps(before) {
   for (let i = 0; i < 50; i++) {
     const left = readdirSync(uploadDir).filter((f) => !before.has(f));
@@ -100,27 +96,18 @@ function harness(t, { hold, onCreate } = {}) {
         await new Promise((_, reject) =>
           options.abortSignal.addEventListener(
             "abort",
-            () =>
-              reject(
-                Object.assign(new Error("Request aborted"), {
-                  name: "AbortError",
-                }),
-              ),
+            () => reject(Object.assign(new Error("Request aborted"), { name: "AbortError" })),
             { once: true },
           ),
         );
       }
       if (!Buffer.isBuffer(body)) body.resume();
-      objects.set(key, {
-        size: command.input.ContentLength,
-        type: command.input.ContentType,
-      });
+      objects.set(key, { size: command.input.ContentLength, type: command.input.ContentType });
       return {};
     }
     if (name === "HeadObjectCommand") {
       const object = objects.get(key);
-      if (!object)
-        throw Object.assign(new Error("missing"), { name: "NotFound" });
+      if (!object) throw Object.assign(new Error("missing"), { name: "NotFound" });
       return { ContentLength: object.size, ContentType: object.type };
     }
     if (name === "ListObjectVersionsCommand")
@@ -139,9 +126,7 @@ function harness(t, { hold, onCreate } = {}) {
   t.mock.method(StorageCleanup, "bulkWrite", async (ops) => {
     for (const op of ops) journal.set(op.updateOne.filter.key, true);
   });
-  t.mock.method(StorageCleanup, "deleteOne", async ({ key }) =>
-    journal.delete(key),
-  );
+  t.mock.method(StorageCleanup, "deleteOne", async ({ key }) => journal.delete(key));
   t.mock.method(StorageCleanup, "updateOne", async () => ({}));
   const doc = (fields) => ({
     ...fields,
@@ -161,8 +146,7 @@ function harness(t, { hold, onCreate } = {}) {
         r.status === "ready" &&
         filter.$or.some(
           (f) =>
-            (f.key && f.key === r.key) ||
-            (f.thumbnailKey && f.thumbnailKey === r.thumbnailKey),
+            (f.key && f.key === r.key) || (f.thumbnailKey && f.thumbnailKey === r.thumbnailKey),
         ),
     ),
   );
@@ -174,11 +158,10 @@ function harness(t, { hold, onCreate } = {}) {
       return doc(record);
     },
   }));
-  t.mock.method(Video, "deleteOne", async (filter) =>
-    records.delete(filter._id),
-  );
+  t.mock.method(Video, "deleteOne", async (filter) => records.delete(filter._id));
   return { objects, records, journal, events, reachedHold };
 }
+
 const upload = (id) => {
   const req = request(app)
     .post("/api/videos/upload")
@@ -187,6 +170,7 @@ const upload = (id) => {
   if (id) req.set("X-Upload-Id", id);
   return req.field("duration", "2").attach("file", clip, "Clip.mp4");
 };
+
 const cancel = (id, headers = { Authorization: auth, Origin: origin }) => {
   const req = request(app).post(`/api/videos/upload/${id}/cancel`);
   for (const [name, value] of Object.entries(headers)) req.set(name, value);
@@ -238,9 +222,7 @@ test(
     assert.equal(res.status, 499);
     assert.equal(res.body.error.code, "UPLOAD_CANCELLED");
     assert.ok(!h.events.some((e) => e.startsWith("create:")));
-    assert.ok(
-      !h.events.some((e) => e.startsWith("PutObjectCommand:thumbnail/")),
-    );
+    assert.ok(!h.events.some((e) => e.startsWith("PutObjectCommand:thumbnail/")));
     assert.equal(h.objects.size, 0);
     assert.equal(h.journal.size, 0);
     assert.deepEqual(await settledTemps(before), []);
@@ -278,19 +260,15 @@ test(
   },
 );
 
-test(
-  "completed uploads without a cancel are preserved",
-  { skip: !hasFfmpeg },
-  async (t) => {
-    const h = harness(t);
-    const res = await upload(randomUUID());
-    assert.equal(res.status, 201);
-    const other = await cancel(randomUUID());
-    assert.deepEqual(other.body.data, { cancelled: true, removed: false });
-    assert.equal(h.records.size, 1);
-    assert.equal(h.objects.size, 2);
-  },
-);
+test("completed uploads without a cancel are preserved", { skip: !hasFfmpeg }, async (t) => {
+  const h = harness(t);
+  const res = await upload(randomUUID());
+  assert.equal(res.status, 201);
+  const other = await cancel(randomUUID());
+  assert.deepEqual(other.body.data, { cancelled: true, removed: false });
+  assert.equal(h.records.size, 1);
+  assert.equal(h.objects.size, 2);
+});
 
 test(
   "cancelling during the transfer closes the request and removes the partial file",
@@ -334,10 +312,7 @@ test(
       req.write(data);
     });
     await wait(200);
-    assert.equal(
-      readdirSync(uploadDir).filter((f) => !before.has(f)).length,
-      1,
-    );
+    assert.equal(readdirSync(uploadDir).filter((f) => !before.has(f)).length, 1);
     await cancel(id);
     assert.ok(["closed", 499].includes(await closed));
     assert.deepEqual(await settledTemps(before), []);
@@ -354,8 +329,5 @@ test("upload and cancel IDs are validated, and cancels require a session", async
   assert.equal(bad.status, 400);
   assert.equal((await cancel("not-a-uuid")).status, 400);
   assert.equal((await cancel(randomUUID(), { Origin: origin })).status, 401);
-  assert.equal(
-    (await cancel(randomUUID(), { Authorization: auth })).status,
-    200,
-  );
+  assert.equal((await cancel(randomUUID(), { Authorization: auth })).status, 200);
 });

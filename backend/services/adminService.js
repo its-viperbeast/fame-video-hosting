@@ -1,11 +1,7 @@
 import { env } from "../config/env.js";
 import Admin from "../models/Admin.js";
 
-export const publicAdmin = (admin) => ({
-  email: admin.email,
-  name: admin.name,
-  role: admin.role,
-});
+export const publicAdmin = (admin) => ({ email: admin.email, name: admin.name, role: admin.role });
 
 // The env values only create the first admin. Later sign-in uses this record.
 export async function ensureAdmin() {

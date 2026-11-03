@@ -19,7 +19,9 @@ import {
   overallProgress,
   UNFINISHED,
 } from "../services/uploadQueue";
+
 const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
+
 export default function VideoUpload({
   open,
   onUploaded,
@@ -67,9 +69,7 @@ export default function VideoUpload({
   }, [busy]);
   useEffect(() => {
     if (!leaveGuard) return;
-    leaveGuard.current = busy
-      ? (proceed) => setPendingLeave(() => proceed)
-      : null;
+    leaveGuard.current = busy ? (proceed) => setPendingLeave(() => proceed) : null;
     return () => {
       leaveGuard.current = null;
     };
@@ -78,24 +78,18 @@ export default function VideoUpload({
     const scheduler = createUploadQueue({
       upload: api.upload,
       onChange: (id, changes) =>
-        setItems((prev) =>
-          prev.map((item) => (item.id === id ? { ...item, ...changes } : item)),
-        ),
+        setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...changes } : item))),
       onComplete: (item, result) => {
         setItems((prev) =>
           prev.map((i) =>
-            i.id === item.id
-              ? { ...i, video: result.video, warning: result.warning }
-              : i,
+            i.id === item.id ? { ...i, video: result.video, warning: result.warning } : i,
           ),
         );
-        if (result.warning)
-          toast.warning(`${item.file.name}: ${result.warning}`);
+        if (result.warning) toast.warning(`${item.file.name}: ${result.warning}`);
         else toast.success(`${item.file.name} uploaded successfully`);
         uploadedCallback.current?.();
       },
-      onError: (item, error) =>
-        toast.error(`${item.file.name}: ${error.message}`),
+      onError: (item, error) => toast.error(`${item.file.name}: ${error.message}`),
     });
     queue.current = scheduler;
     const urls = objectUrls.current;
@@ -110,14 +104,9 @@ export default function VideoUpload({
       setInspecting(true);
       const selected = Array.from(files);
       if (selected.length > 20)
-        toast.warning(
-          `Only the first 20 of ${selected.length} videos were added.`,
-        );
+        toast.warning(`Only the first 20 of ${selected.length} videos were added.`);
       for (const file of selected.slice(0, 20)) {
-        if (
-          !/\.mp4$/i.test(file.name) ||
-          (file.type && file.type !== "video/mp4")
-        ) {
+        if (!/\.mp4$/i.test(file.name) || (file.type && file.type !== "video/mp4")) {
           toast.error(`${file.name}: please choose an MP4 video.`);
           continue;
         }
@@ -133,14 +122,7 @@ export default function VideoUpload({
           objectUrls.current.add(url);
           setItems((prev) => [
             ...prev,
-            {
-              id: crypto.randomUUID(),
-              file,
-              metadata,
-              url,
-              status: "ready",
-              progress: 0,
-            },
+            { id: crypto.randomUUID(), file, metadata, url, status: "ready", progress: 0 },
           ]);
         } catch (err) {
           toast.error(err.message);
@@ -159,32 +141,35 @@ export default function VideoUpload({
       onDropConsumed();
     }
   }, [droppedFiles, addFiles, onDropConsumed]);
+
   function upload(selected) {
     const next = busy ? batch : batch + 1;
     const ids = new Set(selected.map((i) => i.id));
     setBatch(next);
-    setItems((prev) =>
-      prev.map((i) => (ids.has(i.id) ? { ...i, batch: next } : i)),
-    );
+    setItems((prev) => prev.map((i) => (ids.has(i.id) ? { ...i, batch: next } : i)));
     queue.current?.enqueue(selected);
   }
+
   function cancel(id) {
     if (queue.current?.cancel(id)) {
       const item = items.find((i) => i.id === id);
       setAnnouncement(`Upload of ${item?.file.name} cancelled.`);
     }
   }
+
   function cancelAll() {
     const cancelled = queue.current?.cancelAll() || 0;
     if (cancelled) setAnnouncement(`${plural(cancelled, "upload")} cancelled.`);
     return cancelled;
   }
+
   // Only these click handlers move the blocker. Router updates arrive as
   // transitions, so an effect could act on a stale blocker and proceed twice.
   function stay() {
     if (blocker.state === "blocked") blocker.reset();
     setPendingLeave(null);
   }
+
   function leave() {
     cancelAll();
     if (blocker.state === "blocked") blocker.proceed();
@@ -193,6 +178,7 @@ export default function VideoUpload({
       pendingLeave();
     }
   }
+
   function remove(id) {
     if (queue.current?.remove(id) === false) return;
     const item = items.find((i) => i.id === id);
@@ -204,6 +190,7 @@ export default function VideoUpload({
     }
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
+
   // If the last upload settles while this is open, the choice stays with the
   // user and the wording says nothing will be cancelled.
   const leaveDialog = leaving && (
@@ -216,10 +203,7 @@ export default function VideoUpload({
           <button className="btn secondary" data-autofocus onClick={stay}>
             {busy ? "Continue uploading" : "Stay on this page"}
           </button>
-          <button
-            className={`btn ${busy ? "danger" : "primary"}`}
-            onClick={leave}
-          >
+          <button className={`btn ${busy ? "danger" : "primary"}`} onClick={leave}>
             {busy ? "Leave and cancel uploads" : "Leave"}
           </button>
         </>
@@ -230,13 +214,10 @@ export default function VideoUpload({
       </div>
       {busy ? (
         <>
-          <p>
-            Uploads are still in progress. Leaving this page will cancel
-            unfinished uploads.
-          </p>
+          <p>Uploads are still in progress. Leaving this page will cancel unfinished uploads.</p>
           <span className="muted">
-            {plural(activeCount + processingCount + queuedCount, "upload")} will
-            be cancelled. Completed uploads are kept.
+            {plural(activeCount + processingCount + queuedCount, "upload")} will be cancelled.
+            Completed uploads are kept.
           </span>
         </>
       ) : (
@@ -245,9 +226,7 @@ export default function VideoUpload({
     </Modal>
   );
   if (!open) return leaveDialog || null;
-  const pending = items.filter((i) =>
-    ["ready", "failed", "cancelled"].includes(i.status),
-  );
+  const pending = items.filter((i) => ["ready", "failed", "cancelled"].includes(i.status));
   const footer = (
     <>
       <span className="upload-privacy">
@@ -275,9 +254,7 @@ export default function VideoUpload({
       <div className="upload-page-layout">
         <section className="upload-page-panel">
           <div className="upload-panel-body">
-            <p className="modal-intro">
-              Big ideas deserve a little space. Add your videos below.
-            </p>
+            <p className="modal-intro">Big ideas deserve a little space. Add your videos below.</p>
             <div
               className={`modal-dropzone ${dragging ? "dragging" : ""} ${inspecting ? "is-unavailable" : ""}`}
               onDragOver={(e) => {
@@ -302,11 +279,7 @@ export default function VideoUpload({
               <h3>Drop your videos here</h3>
               <p>
                 or{" "}
-                <button
-                  className="text-btn"
-                  type="button"
-                  disabled={inspecting}
-                >
+                <button className="text-btn" type="button" disabled={inspecting}>
                   browse files <ArrowUpRight size={14} />
                 </button>{" "}
                 from your computer
@@ -340,11 +313,7 @@ export default function VideoUpload({
                   <span ref={queueHeading} tabIndex={-1}>
                     Upload queue <b>{items.length}</b>
                     {busy && (
-                      <span
-                        className="queue-activity"
-                        role="status"
-                        aria-live="polite"
-                      >
+                      <span className="queue-activity" role="status" aria-live="polite">
                         {[
                           activeCount && `${activeCount} uploading`,
                           processingCount && `${processingCount} processing`,
@@ -362,9 +331,7 @@ export default function VideoUpload({
                         onClick={() => {
                           cancelAll();
                           // The button disappears; keep focus on the queue.
-                          requestAnimationFrame(() =>
-                            queueHeading.current?.focus(),
-                          );
+                          requestAnimationFrame(() => queueHeading.current?.focus());
                         }}
                       >
                         <X size={14} />
@@ -375,9 +342,7 @@ export default function VideoUpload({
                       <button
                         className="text-btn"
                         onClick={() =>
-                          items
-                            .filter((i) => i.status === "completed")
-                            .forEach((i) => remove(i.id))
+                          items.filter((i) => i.status === "completed").forEach((i) => remove(i.id))
                         }
                       >
                         Clear completed
@@ -403,10 +368,8 @@ export default function VideoUpload({
                       <span style={{ width: `${overall.percent}%` }} />
                     </div>
                     <p>
-                      {formatBytes(overall.sent)} of{" "}
-                      {formatBytes(overall.total)} transferred ·{" "}
-                      {overall.completed} of {plural(overall.count, "video")}{" "}
-                      completed
+                      {formatBytes(overall.sent)} of {formatBytes(overall.total)} transferred ·{" "}
+                      {overall.completed} of {plural(overall.count, "video")} completed
                     </p>
                   </div>
                 )}
@@ -424,28 +387,15 @@ export default function VideoUpload({
             )}
             <div className="upload-tip">
               <FileVideo size={18} />
-              <p>
-                Bring your best quality. We’ll keep every detail, just as you
-                intended.
-              </p>
+              <p>Bring your best quality. We’ll keep every detail, just as you intended.</p>
             </div>
           </div>
           <footer className="upload-panel-footer">{footer}</footer>
         </section>
       </div>
       {preview && (
-        <Modal
-          title={preview.file.name}
-          onClose={() => setPreview(null)}
-          className="player-modal"
-        >
-          <video
-            className="local-preview"
-            src={preview.url}
-            controls
-            playsInline
-            autoPlay
-          />
+        <Modal title={preview.file.name} onClose={() => setPreview(null)} className="player-modal">
+          <video className="local-preview" src={preview.url} controls playsInline autoPlay />
         </Modal>
       )}
       {leaveDialog}

@@ -12,13 +12,8 @@ import {
 } from "lucide-react";
 import { formatBytes } from "../services/api";
 import { UNFINISHED } from "../services/uploadQueue";
-export default function UploadProgress({
-  item,
-  onRetry,
-  onRemove,
-  onCancel,
-  onPreview,
-}) {
+
+export default function UploadProgress({ item, onRetry, onRemove, onCancel, onPreview }) {
   const uploading = item.status === "uploading",
     // All bytes are sent; the server is remuxing, creating the thumbnail and storing both.
     processing = item.status === "processing",
@@ -78,23 +73,17 @@ export default function UploadProgress({
             >
               <span />
             </div>
-            <span className="upload-note">
-              Upload complete. Preparing playback and thumbnail…
-            </span>
+            <span className="upload-note">Upload complete. Preparing playback and thumbnail…</span>
           </>
         )}
-        {done && item.warning && (
-          <span className="warning-text">{item.warning}</span>
-        )}
+        {done && item.warning && <span className="warning-text">{item.warning}</span>}
         {failed && (
           <span className="error-text" role="alert">
             {item.error}
           </span>
         )}
         {cancelled && (
-          <span className="upload-note">
-            Nothing was saved. Retry to upload it again.
-          </span>
+          <span className="upload-note">Nothing was saved. Retry to upload it again.</span>
         )}
       </div>
       <div className="upload-item-state">

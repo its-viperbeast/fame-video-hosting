@@ -194,22 +194,22 @@ All responses use one of:
 
 Success payloads below are inside `data`. Typical errors are 400 validation, 401 authentication, 404 missing/expired or unowned resources, 409 concurrent upload state, 413 size limits, 415 invalid MP4, 422 object mismatch, 429 rate limiting, and safe 500 upstream/service failures. Rate limit responses use the same success/error envelope, without request IDs.
 
-| Method | Endpoint                              | Access / purpose                                       |
-| ------ | ------------------------------------- | ------------------------------------------------------ |
-| POST   | `/api/auth/login`                     | Public, rate limited; returns a bearer token           |
-| GET    | `/api/auth/me`                        | Current authenticated administrator                    |
-| POST   | `/api/auth/logout`                    | Acknowledges sign-out; the client drops its token      |
+| Method | Endpoint                              | Access / purpose                                                        |
+| ------ | ------------------------------------- | ----------------------------------------------------------------------- |
+| POST   | `/api/auth/login`                     | Public, rate limited; returns a bearer token                            |
+| GET    | `/api/auth/me`                        | Current authenticated administrator                                     |
+| POST   | `/api/auth/logout`                    | Acknowledges sign-out; the client drops its token                       |
 | POST   | `/api/videos/upload`                  | Authenticated, multipart `file` + `duration`; store video and thumbnail |
-| POST   | `/api/videos/upload/:uploadId/cancel` | Authenticated; stop that upload, or remove it if it just finished |
-| POST   | `/api/videos/validate`                | Authenticated, multipart `header` sample ≤4 KiB        |
-| GET    | `/api/videos`                         | Authenticated, list/filter/sort/page plus statistics   |
-| GET    | `/api/videos/:id`                     | Authenticated, owned video details                     |
-| GET    | `/api/videos/:id/play`                | Authenticated, signed playback URL                     |
-| GET    | `/api/videos/:id/download`            | Authenticated, signed attachment URL                   |
-| PATCH  | `/api/videos/:id`                     | Authenticated, set `{ "favorite": true }`              |
-| PUT    | `/api/videos/:id/thumbnail`           | Authenticated, multipart `thumbnail`; replace thumbnail |
-| DELETE | `/api/videos/:id`                     | Authenticated, delete video, thumbnail and metadata    |
-| GET    | `/api/health`                         | Public, database readiness; 200 or 503                 |
+| POST   | `/api/videos/upload/:uploadId/cancel` | Authenticated; stop that upload, or remove it if it just finished       |
+| POST   | `/api/videos/validate`                | Authenticated, multipart `header` sample ≤4 KiB                         |
+| GET    | `/api/videos`                         | Authenticated, list/filter/sort/page plus statistics                    |
+| GET    | `/api/videos/:id`                     | Authenticated, owned video details                                      |
+| GET    | `/api/videos/:id/play`                | Authenticated, signed playback URL                                      |
+| GET    | `/api/videos/:id/download`            | Authenticated, signed attachment URL                                    |
+| PATCH  | `/api/videos/:id`                     | Authenticated, set `{ "favorite": true }`                               |
+| PUT    | `/api/videos/:id/thumbnail`           | Authenticated, multipart `thumbnail`; replace thumbnail                 |
+| DELETE | `/api/videos/:id`                     | Authenticated, delete video, thumbnail and metadata                     |
+| GET    | `/api/health`                         | Public, database readiness; 200 or 503                                  |
 
 ### Authentication example
 
@@ -308,18 +308,18 @@ Response: `{"success":true,"data":{"deleted":true,"id":"VIDEO_ID"}}`.
 
 ## Configuration reference
 
-| Variable                     | Default / meaning                                                    |
-| ---------------------------- | -------------------------------------------------------------------- |
-| `MAX_UPLOAD_BYTES`           | 2 GiB per video; validated maximum is 5 GiB                          |
-| `MAX_THUMBNAIL_BYTES`        | 10 MiB per custom thumbnail image; validated maximum is 25 MiB       |
-| `PRESIGNED_URL_TTL_SECONDS`  | 900; allowed 60–3600                                                 |
-| `MEDIA_BASE_URL`             | Unset; optional https origin for public playback and thumbnail links |
-| `SESSION_SECRET`             | Required, random 32+ character signing secret                        |
-| `AUTH_EMAIL`                 | Seeds the `admins` collection when it is empty                       |
-| `AUTH_PASSWORD_HASH`         | Initial scrypt hash stored on that admin                             |
-| `FRONTEND_URL`               | Allowed browser origin                                               |
-| `APP_BASE_URL`               | External backend origin                                              |
-| `TRUST_PROXY`                | 0 by default; exact number of trusted proxy hops                     |
+| Variable                    | Default / meaning                                                    |
+| --------------------------- | -------------------------------------------------------------------- |
+| `MAX_UPLOAD_BYTES`          | 2 GiB per video; validated maximum is 5 GiB                          |
+| `MAX_THUMBNAIL_BYTES`       | 10 MiB per custom thumbnail image; validated maximum is 25 MiB       |
+| `PRESIGNED_URL_TTL_SECONDS` | 900; allowed 60–3600                                                 |
+| `MEDIA_BASE_URL`            | Unset; optional https origin for public playback and thumbnail links |
+| `SESSION_SECRET`            | Required, random 32+ character signing secret                        |
+| `AUTH_EMAIL`                | Seeds the `admins` collection when it is empty                       |
+| `AUTH_PASSWORD_HASH`        | Initial scrypt hash stored on that admin                             |
+| `FRONTEND_URL`              | Allowed browser origin                                               |
+| `APP_BASE_URL`              | External backend origin                                              |
+| `TRUST_PROXY`               | 0 by default; exact number of trusted proxy hops                     |
 
 ## Verification
 

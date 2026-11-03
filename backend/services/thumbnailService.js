@@ -10,6 +10,7 @@ const THUMBNAIL_HEIGHT = 1080;
 const MIN_IMAGE_SIDE = 180;
 const MAX_IMAGE_PIXELS = 8192 * 8192;
 const formats = new Set(["jpeg", "png", "webp"]);
+
 export const thumbnailKey = () => `thumbnail/${randomUUID()}.webp`;
 
 // Letterboxing keeps every aspect ratio intact inside the 1920x1080 frame.
@@ -17,10 +18,7 @@ export const thumbnailKey = () => `thumbnail/${randomUUID()}.webp`;
 const encode = (image) =>
   image
     .rotate()
-    .resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, {
-      fit: "contain",
-      background: "#000",
-    })
+    .resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, { fit: "contain", background: "#000" })
     .flatten({ background: "#000" })
     .webp({ quality: 82 })
     .toBuffer();
@@ -70,10 +68,7 @@ export async function videoThumbnail(videoPath, duration, signal) {
       await extractFrame(videoPath, framePath, seconds, signal);
       const frame = await readFile(framePath).catch(() => null);
       // Extracted frames keep the source dimensions, so cap pixels like uploads.
-      if (frame?.length)
-        return await encode(
-          sharp(frame, { limitInputPixels: MAX_IMAGE_PIXELS }),
-        );
+      if (frame?.length) return await encode(sharp(frame, { limitInputPixels: MAX_IMAGE_PIXELS }));
     }
     throw new HttpError(
       422,

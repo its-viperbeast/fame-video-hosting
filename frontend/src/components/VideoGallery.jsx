@@ -1,13 +1,6 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  CloudUpload,
-  Film,
-  RefreshCw,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, CloudUpload, Film, RefreshCw, Trash2, X } from "lucide-react";
 import VideoCard from "./VideoCard";
+
 export default function VideoGallery({
   data,
   loading,
@@ -53,19 +46,14 @@ export default function VideoGallery({
       {selected.length > 0 && (
         <div className="selection-bar">
           <span>
-            <b>{selected.length}</b> video{selected.length > 1 ? "s" : ""}{" "}
-            selected
+            <b>{selected.length}</b> video{selected.length > 1 ? "s" : ""} selected
           </span>
           <div>
             <button className="text-btn danger-text" onClick={onBulkDelete}>
               <Trash2 size={15} />
               Delete selected
             </button>
-            <button
-              className="icon-btn"
-              aria-label="Clear selection"
-              onClick={onClearSelection}
-            >
+            <button className="icon-btn" aria-label="Clear selection" onClick={onClearSelection}>
               <X size={17} />
             </button>
           </div>
@@ -96,17 +84,11 @@ export default function VideoGallery({
           <h3>{emptyTitle}</h3>
           <p>{emptyCopy}</p>
           {search && (
-            <button
-              className="btn secondary clear-search-button"
-              onClick={onClearSearch}
-            >
+            <button className="btn secondary clear-search-button" onClick={onClearSearch}>
               <X size={17} /> Clear search
             </button>
           )}
-          <button
-            className={`btn ${search ? "secondary" : "primary"}`}
-            onClick={onUpload}
-          >
+          <button className={`btn ${search ? "secondary" : "primary"}`} onClick={onUpload}>
             <CloudUpload size={17} />
             Upload a video
           </button>
@@ -133,8 +115,7 @@ export default function VideoGallery({
               {(pagination.page - 1) * pagination.limit + 1}–
               {Math.min(pagination.page * pagination.limit, pagination.total)}
             </strong>{" "}
-            of <strong>{pagination.total}</strong>{" "}
-            {filter === "favorites" ? "favorites" : "videos"}
+            of <strong>{pagination.total}</strong> {filter === "favorites" ? "favorites" : "videos"}
           </span>
           <div>
             <button
@@ -149,10 +130,7 @@ export default function VideoGallery({
               const page =
                 pagination.pages <= 5
                   ? i + 1
-                  : Math.max(
-                      1,
-                      Math.min(pagination.page - 2, pagination.pages - 4),
-                    ) + i;
+                  : Math.max(1, Math.min(pagination.page - 2, pagination.pages - 4)) + i;
               return (
                 <button
                   key={page}

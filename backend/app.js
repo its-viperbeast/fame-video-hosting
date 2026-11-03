@@ -8,6 +8,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { ok, HttpError } from "./utils/http.js";
 import authRoutes from "./routes/authRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
+
 export const app = express();
 app.disable("x-powered-by");
 if (env.TRUST_PROXY) app.set("trust proxy", env.TRUST_PROXY);
@@ -33,10 +34,7 @@ app.use(
     legacyHeaders: false,
     message: {
       success: false,
-      error: {
-        code: "RATE_LIMITED",
-        message: "Too many requests. Please try again shortly.",
-      },
+      error: { code: "RATE_LIMITED", message: "Too many requests. Please try again shortly." },
     },
   }),
 );
@@ -47,7 +45,5 @@ app.get("/api/health", (_req, res) =>
 );
 app.use("/api/auth", authRoutes);
 app.use("/api/videos", videoRoutes);
-app.use((_req, _res, next) =>
-  next(new HttpError(404, "Endpoint not found.", "NOT_FOUND")),
-);
+app.use((_req, _res, next) => next(new HttpError(404, "Endpoint not found.", "NOT_FOUND")));
 app.use(errorHandler);

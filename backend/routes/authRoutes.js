@@ -8,6 +8,7 @@ import Admin from "../models/Admin.js";
 import { requireAuth, verifyPassword } from "../middleware/auth.js";
 import { publicAdmin } from "../services/adminService.js";
 import { ok, wrap, HttpError } from "../utils/http.js";
+
 const router = Router();
 router.post(
   "/login",
@@ -26,20 +27,11 @@ router.post(
   }),
   wrap(async (req, res) => {
     const input = z
-      .object({
-        email: z.email().max(254),
-        password: z.string().min(1).max(256),
-      })
+      .object({ email: z.email().max(254), password: z.string().min(1).max(256) })
       .parse(req.body);
-    const admin = await Admin.findOne({
-      email: input.email.toLowerCase(),
-    }).select("+passwordHash");
+    const admin = await Admin.findOne({ email: input.email.toLowerCase() }).select("+passwordHash");
     if (!admin || !verifyPassword(input.password, admin.passwordHash))
-      throw new HttpError(
-        401,
-        "Email or password is incorrect.",
-        "INVALID_CREDENTIALS",
-      );
+      throw new HttpError(401, "Email or password is incorrect.", "INVALID_CREDENTIALS");
     const token = jwt.sign(
       { role: admin.role, sessionVersion: admin.sessionVersion ?? 0 },
       env.SESSION_SECRET,
@@ -54,9 +46,7 @@ router.post(
     ok(res, { user: publicAdmin(admin), token });
   }),
 );
-router.get("/me", requireAuth, (req, res) =>
-  ok(res, { user: publicAdmin(req.user) }),
-);
+router.get("/me", requireAuth, (req, res) => ok(res, { user: publicAdmin(req.user) }));
 router.post(
   "/change-password",
   rateLimit({
@@ -80,21 +70,11 @@ router.post(
         newPassword: z.string().min(12).max(256),
       })
       .parse(req.body);
-    const admin = await Admin.findOne({ email: req.user.email }).select(
-      "+passwordHash",
-    );
+    const admin = await Admin.findOne({ email: req.user.email }).select("+passwordHash");
     if (!admin || !verifyPassword(input.currentPassword, admin.passwordHash))
-      throw new HttpError(
-        401,
-        "Current password is incorrect.",
-        "INVALID_CREDENTIALS",
-      );
+      throw new HttpError(401, "Current password is incorrect.", "INVALID_CREDENTIALS");
     if (input.currentPassword === input.newPassword)
-      throw new HttpError(
-        400,
-        "Choose a different password.",
-        "VALIDATION_ERROR",
-      );
+      throw new HttpError(400, "Choose a different password.", "VALIDATION_ERROR");
     const salt = randomBytes(16).toString("hex");
     admin.passwordHash = `${salt}:${scryptSync(input.newPassword, salt, 64).toString("hex")}`;
     admin.sessionVersion = (admin.sessionVersion ?? 0) + 1;

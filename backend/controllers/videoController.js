@@ -4,12 +4,7 @@ import { rm, stat } from "node:fs/promises";
 import { z } from "zod";
 import Video from "../models/Video.js";
 import { env } from "../config/env.js";
-import {
-  fileSchema,
-  objectId,
-  escapeRegex,
-  assertMp4,
-} from "../utils/validation.js";
+import { fileSchema, objectId, escapeRegex, assertMp4 } from "../utils/validation.js";
 import { HttpError, ok } from "../utils/http.js";
 import { assertFileMp4, remux } from "../services/ffmpegService.js";
 import {
@@ -31,17 +26,19 @@ async function ownedVideo(req) {
   if (!video) throw new HttpError(404, "Video not found.", "NOT_FOUND");
   return video;
 }
+
 // Object keys stay on the server; the client gets a short-lived signed URL.
 async function present(video) {
   const json = video.toJSON();
-  if (video.thumbnailKey)
-    json.thumbnailUrl = await storage.thumbnailUrl(video.thumbnailKey);
+  if (video.thumbnailKey) json.thumbnailUrl = await storage.thumbnailUrl(video.thumbnailKey);
   return json;
 }
+
 const thumbnailWarning =
   "The video was saved, but its thumbnail could not be created. Upload one from the video menu.";
-const cancelled = () =>
-  new HttpError(499, "Upload cancelled.", "UPLOAD_CANCELLED");
+
+const cancelled = () => new HttpError(499, "Upload cancelled.", "UPLOAD_CANCELLED");
+
 // Runs before Multer, so a cancel stops the transfer as well as processing.
 export function trackUpload(req, res, next) {
   const controller = new AbortController();
@@ -80,6 +77,7 @@ export function trackUpload(req, res, next) {
   }
   next();
 }
+
 export async function ingest(req, res) {
   const signal = req.uploadSignal;
   if (signal.aborted) throw cancelled();
@@ -101,11 +99,7 @@ export async function ingest(req, res) {
     await assertFileMp4(output);
     const info = await stat(output);
     if (info.size < 12 || info.size > env.MAX_UPLOAD_BYTES + 8 * 1024 ** 2)
-      throw new HttpError(
-        422,
-        "Prepared video is an unexpected size.",
-        "INVALID_VIDEO",
-      );
+      throw new HttpError(422, "Prepared video is an unexpected size.", "INVALID_VIDEO");
     // A playable video is kept even if its thumbnail fails; the panel offers a custom upload.
     let thumbnail, warning;
     try {
@@ -144,20 +138,11 @@ export async function ingest(req, res) {
     // No await separates this check from recording the result, so a cancel
     // either lands here and is rolled back, or finds the finished video later.
     const kept = req.uploadId
-      ? ingests.finish(
-          req.user.id,
-          req.uploadId,
-          req.uploadController,
-          video.id,
-        )
+      ? ingests.finish(req.user.id, req.uploadId, req.uploadController, video.id)
       : !signal.aborted;
     if (!kept) {
       await deleteOwnedVideo(req.user.id, video.id).catch((error) =>
-        console.error({
-          rollback: video.id,
-          code: error.name,
-          message: error.message,
-        }),
+        console.error({ rollback: video.id, code: error.name, message: error.message }),
       );
       throw cancelled();
     }
@@ -172,14 +157,17 @@ export async function ingest(req, res) {
     await rm(output, { force: true }).catch(() => {});
   }
 }
+
 export async function validateHeader(req, res) {
   if (!req.file) throw new HttpError(400, "A video header sample is required.");
   assertMp4(req.file.buffer);
   ok(res, { valid: true });
 }
+
 function recentCutoff() {
   return new Date(Date.now() - 24 * 3600000);
 }
+
 export async function list(req, res) {
   const q = z
     .object({
@@ -213,10 +201,7 @@ export async function list(req, res) {
       { $group: { _id: null, total: { $sum: 1 }, size: { $sum: "$size" } } },
     ]),
     Video.countDocuments({ ...base, favorite: true }),
-    Video.countDocuments({
-      ...base,
-      createdAt: { $gte: recentCutoff() },
-    }),
+    Video.countDocuments({ ...base, createdAt: { $gte: recentCutoff() } }),
   ]);
   ok(res, {
     videos: await Promise.all(videos.map(present)),
@@ -226,25 +211,24 @@ export async function list(req, res) {
       total,
       pages: Math.max(1, Math.ceil(total / q.limit)),
     },
-    stats: {
-      total: aggregate[0]?.total || 0,
-      size: aggregate[0]?.size || 0,
-      favorites,
-      recent,
-    },
+    stats: { total: aggregate[0]?.total || 0, size: aggregate[0]?.size || 0, favorites, recent },
     maxUploadBytes: env.MAX_UPLOAD_BYTES,
     maxThumbnailBytes: env.MAX_THUMBNAIL_BYTES,
   });
 }
+
 export async function details(req, res) {
   ok(res, { video: await present(await ownedVideo(req)) });
 }
+
 export async function play(req, res) {
   ok(res, await storage.playbackUrl(await ownedVideo(req)));
 }
+
 export async function download(req, res) {
   ok(res, await storage.playbackUrl(await ownedVideo(req), true));
 }
+
 export async function update(req, res) {
   objectId.parse(req.params.id);
   const input = z
@@ -254,19 +238,13 @@ export async function update(req, res) {
         .trim()
         .min(1)
         .max(180)
-        .refine(
-          (value) => !/[\x00-\x1f\x7f/\\]/.test(value),
-          "Invalid video name",
-        )
+        .refine((value) => !/[\x00-\x1f\x7f/\\]/.test(value), "Invalid video name")
         .optional(),
       note: z.string().trim().max(5000).optional(),
       favorite: z.boolean().optional(),
     })
     .strict()
-    .refine(
-      (value) => Object.keys(value).length > 0,
-      "Choose a field to update",
-    )
+    .refine((value) => Object.keys(value).length > 0, "Choose a field to update")
     .parse(req.body);
   // Only metadata changes here; storage keys and objects stay untouched.
   const video = await Video.findOneAndUpdate(
@@ -277,6 +255,7 @@ export async function update(req, res) {
   if (!video) throw new HttpError(404, "Video not found.", "NOT_FOUND");
   ok(res, { video: await present(video) });
 }
+
 export async function replaceThumbnail(req, res) {
   if (!req.file) throw new HttpError(400, "Choose an image for the thumbnail.");
   const video = await ownedVideo(req);
@@ -301,12 +280,7 @@ export async function replaceThumbnail(req, res) {
     }
     // Swap only if the video is still ready and no other replacement won the race.
     updated = await Video.findOneAndUpdate(
-      {
-        _id: video._id,
-        owner: req.user.id,
-        status: "ready",
-        thumbnailKey: previous ?? null,
-      },
+      { _id: video._id, owner: req.user.id, status: "ready", thumbnailKey: previous ?? null },
       { $set: { thumbnailKey: key } },
       { new: true },
     ).select("+thumbnailKey");
@@ -323,6 +297,7 @@ export async function replaceThumbnail(req, res) {
     );
   ok(res, { video: await present(updated) });
 }
+
 export async function cancelUpload(req, res) {
   const uploadId = z.uuid().parse(req.params.uploadId);
   const videoId = ingests.cancel(req.user.id, uploadId);
@@ -331,11 +306,13 @@ export async function cancelUpload(req, res) {
   if (videoId) await deleteOwnedVideo(req.user.id, videoId);
   ok(res, { cancelled: true, removed: Boolean(videoId) });
 }
+
 export async function remove(req, res) {
   objectId.parse(req.params.id);
   const video = await deleteOwnedVideo(req.user.id, req.params.id);
   ok(res, { deleted: true, id: video.id });
 }
+
 async function deleteOwnedVideo(owner, id) {
   // Marking the record hides it and blocks thumbnail swaps. The keys to delete
   // come from the stored record. A retry is allowed while it is still deleting.
@@ -348,11 +325,7 @@ async function deleteOwnedVideo(owner, id) {
   try {
     await cleanup.destroyVideo(video);
   } catch (error) {
-    console.error({
-      delete: video.id,
-      code: error.name,
-      message: error.message,
-    });
+    console.error({ delete: video.id, code: error.name, message: error.message });
     throw new HttpError(
       503,
       "This video could not be fully deleted. Try again. Frame also retries automatically.",

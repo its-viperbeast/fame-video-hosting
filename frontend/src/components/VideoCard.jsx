@@ -15,15 +15,17 @@ import {
   Trash2,
 } from "lucide-react";
 import { api, formatBytes, formatDate, formatDuration } from "../services/api";
+
 const imageState = (src) => ({ for: src, src, renewed: false, failed: false });
+
 function Thumbnail({ video }) {
   const ref = useRef(null),
     [url, setUrl] = useState(""),
     [failed, setFailed] = useState(false),
     [image, setImage] = useState(() => imageState(video.thumbnailUrl));
   // A replaced thumbnail has a new URL, so the card starts fresh instead of showing a cached image.
-  if (image.for !== video.thumbnailUrl)
-    setImage(imageState(video.thumbnailUrl));
+  if (image.for !== video.thumbnailUrl) setImage(imageState(video.thumbnailUrl));
+
   // A lazy image can outlive its signed URL; renew it once before falling back.
   function imageError() {
     const current = image.for;
@@ -35,16 +37,11 @@ function Thumbnail({ video }) {
     api
       .details(video.id)
       .then(({ video: fresh }) =>
-        setImage((prev) =>
-          prev.for === current ? { ...prev, src: fresh.thumbnailUrl } : prev,
-        ),
+        setImage((prev) => (prev.for === current ? { ...prev, src: fresh.thumbnailUrl } : prev)),
       )
-      .catch(() =>
-        setImage((prev) =>
-          prev.for === current ? { ...prev, failed: true } : prev,
-        ),
-      );
+      .catch(() => setImage((prev) => (prev.for === current ? { ...prev, failed: true } : prev)));
   }
+
   useEffect(() => {
     if (video.thumbnailUrl) return;
     let live = true;
@@ -94,6 +91,7 @@ function Thumbnail({ video }) {
     </span>
   );
 }
+
 export default function VideoCard({
   video,
   onPlay,
@@ -175,11 +173,7 @@ export default function VideoCard({
             <FileVideo size={17} />
           </span>
           <div className="video-name-wrap">
-            <button
-              className="video-title"
-              onClick={() => onPlay(video)}
-              title={video.name}
-            >
+            <button className="video-title" onClick={() => onPlay(video)} title={video.name}>
               {video.name}
             </button>
             <span>
@@ -200,10 +194,7 @@ export default function VideoCard({
             </button>
             {menu && (
               <>
-                <div
-                  className="popover-dismiss"
-                  onClick={() => setMenu(false)}
-                />
+                <div className="popover-dismiss" onClick={() => setMenu(false)} />
                 <div
                   className={`card-menu${dropUp ? " drop-up" : ""}`}
                   id={`video-menu-${video.id}`}
@@ -278,9 +269,7 @@ export default function VideoCard({
                     }}
                   >
                     <Star size={15} />
-                    {video.favorite
-                      ? "Remove from favorites"
-                      : "Add to favorites"}
+                    {video.favorite ? "Remove from favorites" : "Add to favorites"}
                   </button>
                   <button
                     role="menuitem"

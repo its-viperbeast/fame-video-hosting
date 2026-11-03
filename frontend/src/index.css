@@ -947,12 +947,7 @@ button {
 .thumbnail-shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    #10213312 0%,
-    transparent 40%,
-    #091b3430 100%
-  );
+  background: linear-gradient(180deg, #10213312 0%, transparent 40%, #091b3430 100%);
 }
 .play-circle {
   width: 43px;

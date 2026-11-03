@@ -21,12 +21,7 @@ import Login from "./pages/Login";
 import Upload from "./pages/Upload";
 import ChangePassword from "./pages/ChangePassword";
 
-const initialStats = {
-  total: 0,
-  size: 0,
-  recent: 0,
-  favorites: 0,
-};
+const initialStats = { total: 0, size: 0, recent: 0, favorites: 0 };
 
 function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
   const location = useLocation();
@@ -58,9 +53,7 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
     const key = (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key === "k") {
         if (document.querySelector('[aria-modal="true"]')) return;
-        const input = document.querySelector(
-          ".library-search input, .overview-search input",
-        );
+        const input = document.querySelector(".library-search input, .overview-search input");
         // Pages without a search box keep the browser's native shortcut.
         if (!input) return;
         event.preventDefault();
@@ -103,11 +96,7 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
   useEffect(() => {
     if (loading || location.pathname !== "/videos" || !data?.pagination) return;
     const { page, pages } = data.pagination;
-    if (
-      page <= pages ||
-      page !== libraryQuery(location.pathname, location.search).page
-    )
-      return;
+    if (page <= pages || page !== libraryQuery(location.pathname, location.search).page) return;
     const query = new URLSearchParams(location.search);
     query.set("page", String(pages));
     navigate(`/videos?${query}`, { replace: true });
@@ -141,9 +130,7 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
         stats={stats}
         open={mobileNav}
         onClose={() => setMobileNav(false)}
-        onLogout={() =>
-          leaveGuard.current ? leaveGuard.current(onLogout) : onLogout()
-        }
+        onLogout={() => (leaveGuard.current ? leaveGuard.current(onLogout) : onLogout())}
         dark={dark}
         onTheme={onTheme}
       />
@@ -153,23 +140,11 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
           <Routes>
             <Route path="/upload" element={<Upload />} />
             <Route path="/change-password" element={<ChangePassword />} />
-            <Route
-              path="/storage"
-              element={<Navigate to="/videos" replace />}
-            />
-            <Route
-              path="/settings"
-              element={<Navigate to="/videos" replace />}
-            />
-            <Route
-              path="/favorites"
-              element={<Navigate to="/videos?filter=favorites" replace />}
-            />
+            <Route path="/storage" element={<Navigate to="/videos" replace />} />
+            <Route path="/settings" element={<Navigate to="/videos" replace />} />
+            <Route path="/favorites" element={<Navigate to="/videos?filter=favorites" replace />} />
             <Route path="/shared" element={<Navigate to="/videos" replace />} />
-            <Route
-              path="/uploads"
-              element={<Navigate to="/upload" replace />}
-            />
+            <Route path="/uploads" element={<Navigate to="/upload" replace />} />
             <Route
               path="*"
               element={
@@ -196,9 +171,7 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
             open={location.pathname === "/upload"}
             onUploaded={() => refresh()}
             maxSize={
-              data?.maxUploadBytes ||
-              Number(import.meta.env.VITE_MAX_UPLOAD_BYTES) ||
-              2 * 1024 ** 3
+              data?.maxUploadBytes || Number(import.meta.env.VITE_MAX_UPLOAD_BYTES) || 2 * 1024 ** 3
             }
             droppedFiles={dropFiles}
             onDropConsumed={() => setDropFiles(null)}
@@ -211,9 +184,7 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
 }
 
 function Root() {
-  const [dark, setDark] = useState(
-      () => document.documentElement.dataset.theme === "dark",
-    ),
+  const [dark, setDark] = useState(() => document.documentElement.dataset.theme === "dark"),
     [auth, setAuth] = useState("checking"),
     [authError, setAuthError] = useState("");
 

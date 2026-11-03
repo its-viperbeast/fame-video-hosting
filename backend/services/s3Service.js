@@ -10,12 +10,12 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "../config/aws.js";
 import { env } from "../config/env.js";
 import { HttpError } from "../utils/http.js";
+
 const base = (key) => ({ Bucket: env.AWS_S3_BUCKET, Key: key });
+
 const sign = (command, options = {}) =>
-  getSignedUrl(s3, command, {
-    expiresIn: env.PRESIGNED_URL_TTL_SECONDS,
-    ...options,
-  });
+  getSignedUrl(s3, command, { expiresIn: env.PRESIGNED_URL_TTL_SECONDS, ...options });
+
 export async function putFile(key, filePath, size, signal) {
   const body = createReadStream(filePath);
   try {
@@ -34,6 +34,7 @@ export async function putFile(key, filePath, size, signal) {
     throw error;
   }
 }
+
 export async function putThumbnail(key, body, signal) {
   await s3.send(
     new PutObjectCommand({
@@ -45,16 +46,11 @@ export async function putThumbnail(key, body, signal) {
     { abortSignal: signal },
   );
   // Confirm the stored object before any database record points at it.
-  const head = await s3.send(new HeadObjectCommand(base(key)), {
-    abortSignal: signal,
-  });
+  const head = await s3.send(new HeadObjectCommand(base(key)), { abortSignal: signal });
   if (head.ContentLength !== body.length || head.ContentType !== "image/webp")
-    throw new HttpError(
-      502,
-      "The thumbnail was not stored correctly.",
-      "STORAGE_MISMATCH",
-    );
+    throw new HttpError(502, "The thumbnail was not stored correctly.", "STORAGE_MISMATCH");
 }
+
 // No object tagging: B2 ignores the ?tagging subresource and treats
 // PutObjectTagging as PutObject, replacing the video with the tag XML.
 // Orphans are tracked in MongoDB instead (see cleanupService).
@@ -79,19 +75,14 @@ async function objectVersions(key) {
       for (const entry of entries || []) {
         if (entry.Key !== key) continue;
         if (!entry.VersionId)
-          throw new HttpError(
-            502,
-            "Storage did not return an object version.",
-            "STORAGE_MISMATCH",
-          );
+          throw new HttpError(502, "Storage did not return an object version.", "STORAGE_MISMATCH");
         target.push(entry.VersionId);
       }
     }
     if (!page.IsTruncated) return { versions, markers };
     if (
       !page.NextKeyMarker ||
-      (page.NextKeyMarker === KeyMarker &&
-        page.NextVersionIdMarker === VersionIdMarker)
+      (page.NextKeyMarker === KeyMarker && page.NextVersionIdMarker === VersionIdMarker)
     )
       throw new HttpError(
         502,
@@ -102,6 +93,7 @@ async function objectVersions(key) {
     VersionIdMarker = page.NextVersionIdMarker;
   }
 }
+
 // An object that is already gone counts as deleted, so retries can finish.
 export async function deleteObject(key) {
   const { versions, markers } = await objectVersions(key);
@@ -122,17 +114,15 @@ export async function deleteObject(key) {
       "DELETE_INCOMPLETE",
     );
 }
+
 // With MEDIA_BASE_URL set, playback and thumbnails come from that public origin
 // (Cloudflare in front of the bucket) as <origin>/<object key>. Those links are
 // public and never expire. Downloads stay signed so the response can carry
 // Content-Disposition with the video's name.
 const mediaUrl = (key) =>
   `${env.MEDIA_BASE_URL}/${key.split("/").map(encodeURIComponent).join("/")}`;
-export async function playbackUrl(
-  video,
-  download = false,
-  ttl = env.PRESIGNED_URL_TTL_SECONDS,
-) {
+
+export async function playbackUrl(video, download = false, ttl = env.PRESIGNED_URL_TTL_SECONDS) {
   if (env.MEDIA_BASE_URL && !download) return { url: mediaUrl(video.key) };
   const disposition = download
     ? `attachment; filename="video.mp4"; filename*=UTF-8''${encodeURIComponent(video.name).replace(/['()*]/g, (ch) => "%" + ch.charCodeAt(0).toString(16))}`
@@ -148,6 +138,7 @@ export async function playbackUrl(
   );
   return { url, expiresAt: new Date(Date.now() + ttl * 1000).toISOString() };
 }
+
 // Signing from the start of a half-TTL window keeps the URL stable across list
 // requests, so the browser reuses its cached image. Each replacement has a new
 // key, which changes the URL, so a cached thumbnail is never stale.
@@ -160,9 +151,6 @@ export async function thumbnailUrl(key, ttl = env.PRESIGNED_URL_TTL_SECONDS) {
       ResponseContentType: "image/webp",
       ResponseCacheControl: `private, max-age=${ttl}, immutable`,
     }),
-    {
-      expiresIn: ttl,
-      signingDate: new Date(Math.floor(Date.now() / window) * window),
-    },
+    { expiresIn: ttl, signingDate: new Date(Math.floor(Date.now() / window) * window) },
   );
 }

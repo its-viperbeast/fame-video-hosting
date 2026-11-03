@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { HttpError } from "./http.js";
+
 export const fileSchema = (max) =>
   z
     .object({
@@ -15,9 +16,9 @@ export const fileSchema = (max) =>
       duration: z.number().min(0).max(604800).optional().default(0),
     })
     .strict();
-export const objectId = z
-  .string()
-  .regex(/^[a-f\d]{24}$/i, "Invalid resource ID");
+
+export const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid resource ID");
+
 export function validateMp4Header(bytes) {
   const data = Buffer.from(bytes);
   const brands = new Set([
@@ -38,19 +39,16 @@ export function validateMp4Header(bytes) {
   const boxSize = data.readUInt32BE(0);
   if (boxSize < 16 || boxSize > data.length) return false;
   for (let offset = 8; offset + 4 <= boxSize; offset += 4) {
-    if (offset !== 12 && brands.has(data.toString("ascii", offset, offset + 4)))
-      return true;
+    if (offset !== 12 && brands.has(data.toString("ascii", offset, offset + 4))) return true;
   }
   return false;
 }
+
 export function assertMp4(bytes) {
   if (!validateMp4Header(bytes))
-    throw new HttpError(
-      415,
-      "The file is not a supported MP4 video.",
-      "INVALID_VIDEO",
-    );
+    throw new HttpError(415, "The file is not a supported MP4 video.", "INVALID_VIDEO");
 }
+
 export function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

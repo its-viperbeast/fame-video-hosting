@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  AlertCircle,
-  LoaderCircle,
-  RefreshCw,
-  ShieldCheck,
-} from "lucide-react";
+import { AlertCircle, LoaderCircle, RefreshCw, ShieldCheck } from "lucide-react";
 import { api, formatBytes, formatDate } from "../services/api";
 import Modal from "./Modal";
+
 export function Player({ video, getSource }) {
   const [source, setSource] = useState(null),
     [error, setError] = useState(""),
@@ -17,10 +13,7 @@ export function Player({ video, getSource }) {
     attempts = useRef(0);
   refresh.current = async () => {
     if (player.current)
-      restore.current = {
-        time: player.current.currentTime,
-        playing: !player.current.paused,
-      };
+      restore.current = { time: player.current.currentTime, playing: !player.current.paused };
     setError("");
     try {
       const data = await getSource();
@@ -72,8 +65,7 @@ export function Player({ video, getSource }) {
             onLoadedMetadata={() => {
               if (restore.current) {
                 player.current.currentTime = restore.current.time;
-                if (restore.current.playing)
-                  player.current.play().catch(() => {});
+                if (restore.current.playing) player.current.play().catch(() => {});
                 else player.current.pause();
                 restore.current = null;
               }
@@ -89,9 +81,7 @@ export function Player({ video, getSource }) {
             onError={() => {
               if (attempts.current++ < 1) refresh.current();
               else {
-                setError(
-                  "This video could not be played. Try refreshing the player.",
-                );
+                setError("This video could not be played. Try refreshing the player.");
                 setLoading(false);
               }
             }}
@@ -124,8 +114,7 @@ export function Player({ video, getSource }) {
         <div>
           <h3>{video.name}</h3>
           <p>
-            {formatBytes(video.size)} <span>·</span>{" "}
-            {formatDate(video.createdAt)}
+            {formatBytes(video.size)} <span>·</span> {formatDate(video.createdAt)}
           </p>
         </div>
         <span className="private-badge">
@@ -136,6 +125,7 @@ export function Player({ video, getSource }) {
     </div>
   );
 }
+
 export default function VideoPlayer({ video, onClose }) {
   const getSource = useCallback(() => api.play(video.id), [video.id]);
   return (

@@ -10,6 +10,7 @@ const RETRY_MS = 5 * 60000;
 // A request that is still deleting must not race with the worker.
 const STUCK_DELETE_MS = 10 * 60000;
 const TEMP_FILE_MS = 24 * 3600000;
+
 const log = (scope, error) =>
   console.error({ cleanup: scope, code: error.name, message: error.message });
 
@@ -20,11 +21,7 @@ export async function track(keys, owner, delay = IN_FLIGHT_MS) {
   const deleteAfter = new Date(Date.now() + delay);
   await StorageCleanup.bulkWrite(
     keys.map((key) => ({
-      updateOne: {
-        filter: { key },
-        update: { $set: { owner, deleteAfter } },
-        upsert: true,
-      },
+      updateOne: { filter: { key }, update: { $set: { owner, deleteAfter } }, upsert: true },
     })),
   );
 }
@@ -36,12 +33,7 @@ export async function reconcile(keys) {
   const failed = [];
   for (const key of keys) {
     try {
-      if (
-        !(await Video.exists({
-          status: "ready",
-          $or: [{ key }, { thumbnailKey: key }],
-        }))
-      )
+      if (!(await Video.exists({ status: "ready", $or: [{ key }, { thumbnailKey: key }] })))
         await storage.deleteObject(key);
       await StorageCleanup.deleteOne({ key });
     } catch (error) {
@@ -49,10 +41,7 @@ export async function reconcile(keys) {
       log(key, error);
       await StorageCleanup.updateOne(
         { key },
-        {
-          $set: { deleteAfter: new Date(Date.now() + RETRY_MS) },
-          $inc: { attempts: 1 },
-        },
+        { $set: { deleteAfter: new Date(Date.now() + RETRY_MS) }, $inc: { attempts: 1 } },
       ).catch(() => {});
     }
   }
@@ -63,17 +52,11 @@ export async function reconcile(keys) {
 // the record is removed only once neither remains, so a retry finishes the job.
 export async function destroyVideo(video) {
   const results = await Promise.allSettled(
-    [video.key, video.thumbnailKey]
-      .filter(Boolean)
-      .map((key) => storage.deleteObject(key)),
+    [video.key, video.thumbnailKey].filter(Boolean).map((key) => storage.deleteObject(key)),
   );
   const failure = results.find((result) => result.status === "rejected");
   if (failure) throw failure.reason;
-  await Video.deleteOne({
-    _id: video._id,
-    owner: video.owner,
-    status: "deleting",
-  });
+  await Video.deleteOne({ _id: video._id, owner: video.owner, status: "deleting" });
 }
 
 export async function sweep({ tempDir, now = Date.now() } = {}) {
@@ -83,8 +66,7 @@ export async function sweep({ tempDir, now = Date.now() } = {}) {
   })
     .select("+key +thumbnailKey")
     .limit(100);
-  for (const video of stuck)
-    await destroyVideo(video).catch((error) => log(video.id, error));
+  for (const video of stuck) await destroyVideo(video).catch((error) => log(video.id, error));
   for (let i = 0; i < 100; i++) {
     // Claiming pushes deleteAfter forward, so parallel workers skip this entry.
     const entry = await StorageCleanup.findOneAndUpdate(

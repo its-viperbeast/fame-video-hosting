@@ -2,9 +2,7 @@
 export async function clearLegacyLocalData(browser = window) {
   for (const name of ["localStorage", "sessionStorage"]) {
     const storage = browser[name];
-    const keys = Array.from({ length: storage.length }, (_, index) =>
-      storage.key(index),
-    );
+    const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
     for (const key of keys) {
       if (key?.startsWith("frame-")) storage.removeItem(key);
     }
@@ -13,14 +11,10 @@ export async function clearLegacyLocalData(browser = window) {
     const request = browser.indexedDB.deleteDatabase("frame-workspace-v1");
     request.onsuccess = () => resolve();
     request.onerror = () =>
-      reject(
-        new Error("Could not remove the old local library. Reload to retry."),
-      );
+      reject(new Error("Could not remove the old local library. Reload to retry."));
     request.onblocked = () =>
       reject(
-        new Error(
-          "Close other Frame tabs and reload to finish removing the old local library.",
-        ),
+        new Error("Close other Frame tabs and reload to finish removing the old local library."),
       );
   });
 }

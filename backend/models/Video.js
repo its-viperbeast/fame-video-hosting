@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+
 const schema = new mongoose.Schema(
   {
     owner: { type: String, required: true, index: true },

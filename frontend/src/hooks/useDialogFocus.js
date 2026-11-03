@@ -22,16 +22,10 @@ export default function useDialogFocus(ref, active, onClose) {
         ),
       ].filter(
         (element) =>
-          !element.disabled &&
-          !element.closest("[inert]") &&
-          element.getClientRects().length,
+          !element.disabled && !element.closest("[inert]") && element.getClientRects().length,
       );
     // A dialog can mark its safest action with data-autofocus.
-    (
-      ref.current.querySelector("[data-autofocus]") ||
-      focusable()[0] ||
-      ref.current
-    ).focus();
+    (ref.current.querySelector("[data-autofocus]") || focusable()[0] || ref.current).focus();
 
     const key = (event) => {
       if (event.key === "Escape") {

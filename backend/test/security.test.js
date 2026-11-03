@@ -21,8 +21,7 @@ Object.assign(process.env, {
   MEDIA_BASE_URL: "",
 });
 const { app } = await import("../app.js");
-const { fileSchema, validateMp4Header, escapeRegex } =
-  await import("../utils/validation.js");
+const { fileSchema, validateMp4Header, escapeRegex } = await import("../utils/validation.js");
 const { s3 } = await import("../config/aws.js");
 const { playbackUrl } = await import("../services/s3Service.js");
 const { default: Video } = await import("../models/Video.js");
@@ -31,9 +30,11 @@ const { default: StorageCleanup } = await import("../models/StorageCleanup.js");
 const { installAdmin } = await import("./installAdmin.js");
 const admin = installAdmin();
 const origin = "http://localhost:5173";
+
 function auth(payload = { role: "admin" }, options = {}) {
   return `Bearer ${jwt.sign(payload, process.env.SESSION_SECRET, { subject: "admin@example.com", audience: "frame-api", issuer: "frame", expiresIn: "1h", ...options })}`;
 }
+
 function mp4() {
   const b = Buffer.alloc(24);
   b.writeUInt32BE(24, 0);
@@ -70,14 +71,9 @@ test("login returns a bearer token, rejects bad credentials, and supports logout
   // No cookie is set any more; the token is returned in the body instead.
   assert.equal(login.headers["set-cookie"], undefined);
   const header = `Bearer ${login.body.data.token}`;
+  assert.equal((await request(app).get("/api/auth/me").set("Authorization", header)).status, 200);
   assert.equal(
-    (await request(app).get("/api/auth/me").set("Authorization", header))
-      .status,
-    200,
-  );
-  assert.equal(
-    (await request(app).post("/api/auth/logout").set("Authorization", header))
-      .status,
+    (await request(app).post("/api/auth/logout").set("Authorization", header)).status,
     200,
   );
 });
@@ -90,15 +86,11 @@ test("changing the password verifies the old password and revokes old sessions",
     const changed = await request(app)
       .post("/api/auth/change-password")
       .set("Authorization", oldHeader)
-      .send({
-        currentPassword: "correct-test-password",
-        newPassword: "a-new-test-password",
-      });
+      .send({ currentPassword: "correct-test-password", newPassword: "a-new-test-password" });
     assert.equal(changed.status, 200);
     // The rotated session version invalidates the previous token.
     assert.equal(
-      (await request(app).get("/api/auth/me").set("Authorization", oldHeader))
-        .status,
+      (await request(app).get("/api/auth/me").set("Authorization", oldHeader)).status,
       401,
     );
     assert.equal(
@@ -130,11 +122,7 @@ test("wrong role, owner, audience, and expired sessions are rejected", async () 
     auth({ role: "admin" }, { expiresIn: -1 }),
   ];
   for (const value of headers)
-    assert.equal(
-      (await request(app).get("/api/auth/me").set("Authorization", value))
-        .status,
-      401,
-    );
+    assert.equal((await request(app).get("/api/auth/me").set("Authorization", value)).status, 401);
 });
 test("database failures return 500 while invalid sessions still return 401", async (t) => {
   let lookups = 0;
@@ -142,15 +130,10 @@ test("database failures return 500 while invalid sessions still return 401", asy
     lookups++;
     throw new Error("Database unavailable");
   });
-  const outage = await request(app)
-    .get("/api/auth/me")
-    .set("Authorization", auth());
+  const outage = await request(app).get("/api/auth/me").set("Authorization", auth());
   assert.equal(outage.status, 500);
   assert.equal(outage.body.error.code, "INTERNAL_ERROR");
-  assert.equal(
-    outage.body.error.message,
-    "Something went wrong. Please try again.",
-  );
+  assert.equal(outage.body.error.message, "Something went wrong. Please try again.");
 
   const invalid = await request(app)
     .get("/api/auth/me")
@@ -172,18 +155,12 @@ test("strict upload validation rejects path traversal, MIME spoofing, oversized 
     { owner: "someone-else" },
     { key: "existing.mp4" },
   ])
-    assert.equal(
-      fileSchema(2048).safeParse({ ...valid, ...patch }).success,
-      false,
-    );
+    assert.equal(fileSchema(2048).safeParse({ ...valid, ...patch }).success, false);
   assert.equal(escapeRegex("film[1].mp4"), "film\\[1\\]\\.mp4");
 });
 test("MP4 signature validation inspects the container and rejects forged files", () => {
   assert.equal(validateMp4Header(mp4()), true);
-  assert.equal(
-    validateMp4Header(Buffer.from("not a video file at all")),
-    false,
-  );
+  assert.equal(validateMp4Header(Buffer.from("not a video file at all")), false);
   const unsupported = mp4();
   unsupported.write("heic", 8);
   unsupported.write("heic", 16);
@@ -265,27 +242,20 @@ test("renaming and notes update only the owner's ready video metadata without st
     const result = await patch(body);
     assert.equal(result.status, 200);
     for (const [field, value] of Object.entries(body))
-      assert.equal(
-        result.body.data.video[field],
-        typeof value === "string" ? value.trim() : value,
-      );
+      assert.equal(result.body.data.video[field], typeof value === "string" ? value.trim() : value);
     assert.equal(result.body.data.video.key, undefined);
     assert.equal(result.body.data.video.owner, undefined);
     assert.equal(result.body.data.video.__v, undefined);
     assert.match(result.body.data.video.thumbnailUrl, /X-Amz-Signature/);
   }
   assert.deepEqual(writes[0], { $set: { name: "Wedding highlights" } });
-  assert.deepEqual(writes[1], {
-    $set: { note: "First cut\nReview the ending." },
-  });
+  assert.deepEqual(writes[1], { $set: { note: "First cut\nReview the ending." } });
   assert.equal(state.key, "videos/original.mp4");
   assert.equal(state.thumbnailKey, "thumbnail/original.webp");
   assert.equal(state.size, 1024);
 });
 test("metadata edits reject invalid fields and values before querying MongoDB", async (t) => {
-  t.mock.method(Video, "findOneAndUpdate", () =>
-    assert.fail("Invalid metadata reached MongoDB"),
-  );
+  t.mock.method(Video, "findOneAndUpdate", () => assert.fail("Invalid metadata reached MongoDB"));
   for (const body of [
     {},
     { name: "   " },
@@ -336,12 +306,7 @@ test("metadata edits cannot change unowned, deleted, or deleting videos", async 
 });
 test("all MongoDB models save without version keys and enforce note limits", async (t) => {
   const documents = [
-    new Video({
-      owner: "admin@example.com",
-      name: "Clip.mp4",
-      key: "videos/clip.mp4",
-      size: 1024,
-    }),
+    new Video({ owner: "admin@example.com", name: "Clip.mp4", key: "videos/clip.mp4", size: 1024 }),
     new Admin({
       email: "admin@example.com",
       name: "admin",
@@ -355,14 +320,10 @@ test("all MongoDB models save without version keys and enforce note limits", asy
   ];
   for (const document of documents) {
     let inserted;
-    t.mock.method(
-      document.constructor.collection,
-      "insertOne",
-      async (fields) => {
-        inserted = fields;
-        return { acknowledged: true, insertedId: fields._id };
-      },
-    );
+    t.mock.method(document.constructor.collection, "insertOne", async (fields) => {
+      inserted = fields;
+      return { acknowledged: true, insertedId: fields._id };
+    });
     await document.save();
     assert.ok(inserted);
     assert.equal(Object.hasOwn(inserted, "__v"), false);
@@ -373,10 +334,7 @@ test("all MongoDB models save without version keys and enforce note limits", asy
   assert.ok(video.validateSync().errors.note);
 });
 test("playback signs private GETs", async () => {
-  const playback = await playbackUrl({
-    key: "videos/test.mp4",
-    name: "My film.mp4",
-  });
+  const playback = await playbackUrl({ key: "videos/test.mp4", name: "My film.mp4" });
   assert.match(playback.url, /X-Amz-Signature/);
   assert.ok(new Date(playback.expiresAt) > new Date());
 });

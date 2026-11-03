@@ -2,9 +2,7 @@ import "dotenv/config";
 import { z } from "zod";
 
 const schema = z.object({
-  NODE_ENV: z
-    .enum(["development", "test", "production"])
-    .default("development"),
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(9090),
   MONGODB_URI: z.string().min(1),
   AWS_REGION: z.string().min(1),
@@ -28,12 +26,7 @@ const schema = z.object({
     .min(1024)
     .max(25 * 1024 ** 2)
     .default(10 * 1024 ** 2),
-  PRESIGNED_URL_TTL_SECONDS: z.coerce
-    .number()
-    .int()
-    .min(60)
-    .max(3600)
-    .default(900),
+  PRESIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
   TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
   MEDIA_BASE_URL: z.url().optional(),
   FFMPEG_PATH: z.string().min(1).default("ffmpeg"),
@@ -48,11 +41,9 @@ const schema = z.object({
       "FFMPEG_ARGS must include pipe:0 and pipe:1",
     ),
 });
+
 export function parseEnv(input) {
-  const value = schema.parse({
-    ...input,
-    MEDIA_BASE_URL: input.MEDIA_BASE_URL || undefined,
-  });
+  const value = schema.parse({ ...input, MEDIA_BASE_URL: input.MEDIA_BASE_URL || undefined });
   if (value.MEDIA_BASE_URL) {
     const media = new URL(value.MEDIA_BASE_URL);
     if (media.protocol !== "https:" || media.search || media.hash)
@@ -63,11 +54,9 @@ export function parseEnv(input) {
   const expectedHost = `s3.${value.AWS_REGION}.backblazeb2.com`;
   if (endpoint.protocol !== "https:" || endpoint.hostname !== expectedHost)
     throw new Error(`S3_ENDPOINT must be https://${expectedHost}`);
-  if (
-    value.NODE_ENV === "production" &&
-    !value.FRONTEND_URL.startsWith("https://")
-  )
+  if (value.NODE_ENV === "production" && !value.FRONTEND_URL.startsWith("https://"))
     throw new Error("Production requires HTTPS");
   return value;
 }
+
 export const env = parseEnv(process.env);

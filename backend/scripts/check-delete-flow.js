@@ -28,16 +28,9 @@ try {
   const thumbnailKey = `thumbnail/${randomUUID()}.webp`;
   const versions = async (Key) => {
     const result = await s3.send(
-      new ListObjectVersionsCommand({
-        Bucket: env.AWS_S3_BUCKET,
-        Prefix: Key,
-      }),
+      new ListObjectVersionsCommand({ Bucket: env.AWS_S3_BUCKET, Prefix: Key }),
     );
-    assert.equal(
-      result.IsTruncated,
-      false,
-      "Unexpected pagination for this new test key",
-    );
+    assert.equal(result.IsTruncated, false, "Unexpected pagination for this new test key");
     return [...(result.Versions || []), ...(result.DeleteMarkers || [])].filter(
       (entry) => entry.Key === Key,
     );
@@ -46,30 +39,16 @@ try {
   assert.equal((await versions(key)).length, 0);
   keys.push(key, thumbnailKey);
   await cleanup.track(keys, env.AUTH_EMAIL);
-  const source = fileURLToPath(
-    new URL("../../frontend/public/sample.mp4", import.meta.url),
-  );
+  const source = fileURLToPath(new URL("../../frontend/public/sample.mp4", import.meta.url));
   const { size } = await stat(source);
   // Include an overwritten version and an old-style hide marker in the fixture.
   await storage.putFile(key, source, size);
   await storage.putFile(key, source, size);
-  await s3.send(
-    new DeleteObjectCommand({ Bucket: env.AWS_S3_BUCKET, Key: key }),
-  );
-  assert.ok(
-    (await versions(key)).length >= 3,
-    "Expected retained versions and a hide marker",
-  );
-  console.info(
-    "Confirmed: name-only deletion retains file versions in the real bucket.",
-  );
+  await s3.send(new DeleteObjectCommand({ Bucket: env.AWS_S3_BUCKET, Key: key }));
+  assert.ok((await versions(key)).length >= 3, "Expected retained versions and a hide marker");
+  console.info("Confirmed: name-only deletion retains file versions in the real bucket.");
   const image = await sharp({
-    create: {
-      width: 1920,
-      height: 1080,
-      channels: 3,
-      background: "#000000",
-    },
+    create: { width: 1920, height: 1080, channels: 3, background: "#000000" },
   })
     .webp()
     .toBuffer();
@@ -83,10 +62,7 @@ try {
     thumbnailKey,
     size,
   });
-  assert.equal(
-    (await Video.collection.findOne({ _id: fixtureId })).__v,
-    undefined,
-  );
+  assert.equal((await Video.collection.findOne({ _id: fixtureId })).__v, undefined);
   server = app.listen(0, "127.0.0.1");
   await new Promise((resolve, reject) => {
     server.once("listening", resolve);
@@ -98,14 +74,11 @@ try {
     issuer: "frame",
     expiresIn: "1m",
   });
-  const response = await fetch(
-    `http://127.0.0.1:${server.address().port}/api/videos/${video.id}`,
-    {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(60000),
-    },
-  );
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/videos/${video.id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(60000),
+  });
   const body = await response.json();
   assert.equal(
     response.status,
@@ -114,11 +87,7 @@ try {
   );
   assert.equal(body.data.deleted, true);
   for (const Key of keys) {
-    assert.equal(
-      (await versions(Key)).length,
-      0,
-      "A stored version or delete marker remains",
-    );
+    assert.equal((await versions(Key)).length, 0, "A stored version or delete marker remains");
     await assert.rejects(
       s3.send(new HeadObjectCommand({ Bucket: env.AWS_S3_BUCKET, Key })),
       (error) => error.$metadata?.httpStatusCode === 404,
@@ -129,9 +98,7 @@ try {
     "PASS: delete endpoint removed every video/thumbnail version and marker, both objects return 404, and the MongoDB record is gone.",
   );
 } catch (error) {
-  console.error(
-    `Live delete check failed (${error.name}, ${error.code || "no code"}).`,
-  );
+  console.error(`Live delete check failed (${error.name}, ${error.code || "no code"}).`);
   process.exitCode = 1;
 } finally {
   if (server) await new Promise((resolve) => server.close(resolve));
@@ -149,9 +116,7 @@ try {
       if (failed.length) throw new Error("Fixture cleanup incomplete");
       console.info("Verification fixture cleanup complete.");
     } catch (error) {
-      console.error(
-        `Fixture cleanup pending (${error.name}); the cleanup worker will retry.`,
-      );
+      console.error(`Fixture cleanup pending (${error.name}); the cleanup worker will retry.`);
       process.exitCode = 1;
     }
   }

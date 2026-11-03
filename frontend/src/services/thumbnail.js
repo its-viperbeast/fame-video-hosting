@@ -3,14 +3,10 @@ export const THUMBNAIL_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export const MIN_THUMBNAIL_SIDE = 180;
 
 export function thumbnailFileError(file, maxSize) {
-  if (
-    !THUMBNAIL_TYPES.includes(file.type) ||
-    !/\.(jpe?g|png|webp)$/i.test(file.name)
-  )
+  if (!THUMBNAIL_TYPES.includes(file.type) || !/\.(jpe?g|png|webp)$/i.test(file.name))
     return "Choose a JPEG, PNG, or WebP image.";
   if (!file.size) return "This image is empty.";
-  if (file.size > maxSize)
-    return `Images can be up to ${+(maxSize / 1024 ** 2).toFixed(1)} MB.`;
+  if (file.size > maxSize) return `Images can be up to ${+(maxSize / 1024 ** 2).toFixed(1)} MB.`;
   return "";
 }
 

@@ -1,11 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  createUploadQueue,
-  overallProgress,
-} from "../src/services/uploadQueue.js";
+import { createUploadQueue, overallProgress } from "../src/services/uploadQueue.js";
 
 const item = (id) => ({ id, file: { name: `${id}.mp4` }, metadata: {} });
+
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 
 function harness(concurrency = 3) {
@@ -135,11 +133,7 @@ test("shows processing once every byte is sent, until the server confirms", asyn
   h.queue.enqueue([item("a")]);
   h.transfers[0].progress(42, 420);
   assert.deepEqual(
-    [
-      h.states.get("a").status,
-      h.states.get("a").progress,
-      h.states.get("a").loaded,
-    ],
+    [h.states.get("a").status, h.states.get("a").progress, h.states.get("a").loaded],
     ["uploading", 42, 420],
   );
   h.transfers[0].progress(100);
@@ -187,8 +181,7 @@ test("cancel all stops active and queued uploads and keeps completed ones", asyn
   await settle();
   assert.equal(h.transfers[2].name, "c.mp4");
   assert.equal(h.queue.cancelAll(), 3);
-  for (const id of ["b", "c", "d"])
-    assert.equal(h.states.get(id).status, "cancelled");
+  for (const id of ["b", "c", "d"]) assert.equal(h.states.get(id).status, "cancelled");
   assert.ok(h.transfers.slice(1).every((t) => t.signal.aborted));
   h.transfers[1].reject(new Error("canceled"));
   h.transfers[2].reject(new Error("canceled"));

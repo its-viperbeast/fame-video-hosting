@@ -4,10 +4,11 @@
 // rolls back an upload that finished just before the cancel arrived.
 const entries = new Map();
 const KEEP_MS = 5 * 60000;
+
 const keyOf = (owner, id) => `${owner}\n${id}`;
+
 function prune(now) {
-  for (const [key, entry] of entries)
-    if (entry.expires && entry.expires < now) entries.delete(key);
+  for (const [key, entry] of entries) if (entry.expires && entry.expires < now) entries.delete(key);
 }
 
 export function start(owner, id, controller) {

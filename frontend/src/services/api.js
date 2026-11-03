@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getToken, setToken, clearToken } from "./authToken";
+
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:9090/api",
   timeout: 30000,
@@ -11,8 +12,7 @@ http.interceptors.request.use((config) => {
 });
 // Used when a proxy or timeout answers without the API's error envelope.
 const fallbackMessages = {
-  ERR_NETWORK:
-    "Cannot reach the server. Check your connection and backend configuration.",
+  ERR_NETWORK: "Cannot reach the server. Check your connection and backend configuration.",
   ECONNABORTED: "The server took too long to respond. Please try again.",
   ERR_CANCELED: "Upload cancelled.",
   413: "This file is larger than the upload limit.",
@@ -34,13 +34,16 @@ http.interceptors.response.use(
     return Promise.reject(e);
   },
 );
-const percent = (event) =>
-  Math.min(100, Math.floor((event.loaded / event.total) * 100));
+
+const percent = (event) => Math.min(100, Math.floor((event.loaded / event.total) * 100));
+
 // Upload IDs with a request in flight. If the page is closed or reloaded, the
 // browser drops those requests; a keepalive request also asks the server to
 // stop them.
 const inflight = new Set();
+
 const cancelPath = (id) => `/videos/upload/${id}/cancel`;
+
 if (typeof window !== "undefined")
   window.addEventListener("pagehide", () => {
     // sendBeacon cannot set an Authorization header, so use a keepalive fetch,
@@ -62,10 +65,7 @@ export const api = {
   },
   // Changing the password rotates the session, so the new token replaces the old.
   changePassword: async (currentPassword, newPassword) => {
-    const data = await http.post("/auth/change-password", {
-      currentPassword,
-      newPassword,
-    });
+    const data = await http.post("/auth/change-password", { currentPassword, newPassword });
     if (data?.token) setToken(data.token);
     return data;
   },
@@ -120,28 +120,22 @@ export const api = {
     });
   },
 };
+
 export function formatBytes(bytes, decimals = 1) {
   if (!bytes) return "0 B";
-  const unit = Math.max(
-    0,
-    Math.min(4, Math.floor(Math.log(bytes) / Math.log(1024))),
-  );
+  const unit = Math.max(0, Math.min(4, Math.floor(Math.log(bytes) / Math.log(1024))));
   return `${(bytes / 1024 ** unit).toFixed(unit > 1 ? decimals : 0)} ${["B", "KB", "MB", "GB", "TB"][unit]}`;
 }
+
 export const formatDuration = (s = 0) =>
   `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
 export const formatDate = (d) =>
-  new Date(d).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
 export async function inspectVideo(file) {
   const header = new Uint8Array(await file.slice(0, 16).arrayBuffer());
-  if (
-    header.length < 16 ||
-    String.fromCharCode(...header.slice(4, 8)) !== "ftyp"
-  )
+  if (header.length < 16 || String.fromCharCode(...header.slice(4, 8)) !== "ftyp")
     throw new Error(`${file.name} is not a valid MP4 file.`);
   return new Promise((resolve) => {
     const video = document.createElement("video"),
@@ -163,12 +157,8 @@ export async function inspectVideo(file) {
     video.onloadeddata = () => {
       const canvas = document.createElement("canvas");
       canvas.width = 640;
-      canvas.height =
-        Math.round((640 * video.videoHeight) / (video.videoWidth || 640)) ||
-        360;
-      canvas
-        .getContext("2d")
-        .drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.height = Math.round((640 * video.videoHeight) / (video.videoWidth || 640)) || 360;
+      canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
       done({
         duration: Number.isFinite(video.duration) ? video.duration : 0,
         poster: canvas.toDataURL("image/jpeg", 0.75),

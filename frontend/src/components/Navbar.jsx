@@ -17,9 +17,7 @@ import { formatBytes } from "../services/api";
 import useDialogFocus from "../hooks/useDialogFocus";
 
 function useIsMobile() {
-  const [mobile, setMobile] = useState(
-    () => window.matchMedia("(max-width: 720px)").matches,
-  );
+  const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 720px)").matches);
   useEffect(() => {
     const query = window.matchMedia("(max-width: 720px)");
     const change = () => setMobile(query.matches);
@@ -49,12 +47,7 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
   useDialogFocus(sidebar, mobile && open, onClose);
 
   const links = [
-    {
-      to: "/",
-      icon: LayoutGrid,
-      label: "Overview",
-      active: pathname === "/",
-    },
+    { to: "/", icon: LayoutGrid, label: "Overview", active: pathname === "/" },
     {
       to: "/videos",
       icon: FolderOpen,
@@ -62,12 +55,7 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
       count: stats.total,
       active: pathname === "/videos",
     },
-    {
-      to: "/upload",
-      icon: CloudUpload,
-      label: "Upload videos",
-      active: pathname === "/upload",
-    },
+    { to: "/upload", icon: CloudUpload, label: "Upload videos", active: pathname === "/upload" },
     {
       to: "/change-password",
       icon: KeyRound,
@@ -78,9 +66,7 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
 
   return (
     <>
-      {open && (
-        <div className="sidebar-scrim" onClick={onClose} aria-hidden="true" />
-      )}
+      {open && <div className="sidebar-scrim" onClick={onClose} aria-hidden="true" />}
       <aside
         ref={sidebar}
         tabIndex={-1}
@@ -96,11 +82,7 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
           <Link to="/" onClick={onClose} aria-label="Frame home">
             <Brand />
           </Link>
-          <button
-            className="icon-btn mobile-close"
-            aria-label="Close navigation"
-            onClick={onClose}
-          >
+          <button className="icon-btn mobile-close" aria-label="Close navigation" onClick={onClose}>
             <X size={20} />
           </button>
         </div>
@@ -153,8 +135,7 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
 export function Header({ onMenu, menuOpen }) {
   const { pathname, search: routeSearch } = useLocation();
   const favorites =
-    pathname === "/videos" &&
-    new URLSearchParams(routeSearch).get("filter") === "favorites";
+    pathname === "/videos" && new URLSearchParams(routeSearch).get("filter") === "favorites";
   const title = favorites
     ? "Favorites"
     : pathname === "/upload"

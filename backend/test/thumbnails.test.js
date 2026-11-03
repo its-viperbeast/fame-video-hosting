@@ -31,8 +31,7 @@ const { default: Video } = await import("../models/Video.js");
 const { installAdmin } = await import("./installAdmin.js");
 installAdmin();
 const { default: StorageCleanup } = await import("../models/StorageCleanup.js");
-const { processThumbnailImage, videoThumbnail } =
-  await import("../services/thumbnailService.js");
+const { processThumbnailImage, videoThumbnail } = await import("../services/thumbnailService.js");
 const { deleteObject, thumbnailUrl } = await import("../services/s3Service.js");
 const { sweep } = await import("../services/cleanupService.js");
 const { uploadDir } = await import("../routes/videoRoutes.js");
@@ -50,6 +49,7 @@ const hasFfmpeg = (() => {
   }
 })();
 const scratch = mkdtempSync(path.join(os.tmpdir(), "frame-thumb-test-"));
+
 function testVideo(name = "clip.mp4", size = "640x480") {
   const file = path.join(scratch, name);
   execFileSync("ffmpeg", [
@@ -70,22 +70,24 @@ function testVideo(name = "clip.mp4", size = "640x480") {
   ]);
   return file;
 }
+
 const solid = (width, height, color, format = "png") =>
   sharp({ create: { width, height, channels: 3, background: color } })
     .toFormat(format)
     .toBuffer();
+
 async function pixel(buffer, x, y) {
-  const { data, info } = await sharp(buffer)
-    .raw()
-    .toBuffer({ resolveWithObject: true });
+  const { data, info } = await sharp(buffer).raw().toBuffer({ resolveWithObject: true });
   const at = (y * info.width + x) * info.channels;
   return [data[at], data[at + 1], data[at + 2]];
 }
+
 const near = (actual, expected) =>
   assert.ok(
     actual.every((v, i) => Math.abs(v - expected[i]) < 24),
     `${actual} is not close to ${expected}`,
   );
+
 const doc = (fields) => ({
   _id: id,
   id,
@@ -96,7 +98,9 @@ const doc = (fields) => ({
     return { id, name: "Clip.mp4", favorite: false };
   },
 });
+
 const query = (value) => ({ select: async () => value });
+
 // A small in-memory bucket and cleanup journal, so tests can assert what remains.
 function fakeStorage(t, { failPut, failDelete } = {}) {
   const objects = new Map();
@@ -106,8 +110,7 @@ function fakeStorage(t, { failPut, failDelete } = {}) {
     const key = command.input.Key ?? command.input.Prefix;
     calls.push([name, key]);
     if (name === "PutObjectCommand") {
-      if (failPut?.(key))
-        throw Object.assign(new Error("down"), { name: "ServiceUnavailable" });
+      if (failPut?.(key)) throw Object.assign(new Error("down"), { name: "ServiceUnavailable" });
       const body = command.input.Body;
       objects.set(key, {
         body: Buffer.isBuffer(body) ? body : null,
@@ -119,8 +122,7 @@ function fakeStorage(t, { failPut, failDelete } = {}) {
     }
     if (name === "HeadObjectCommand") {
       const object = objects.get(key);
-      if (!object)
-        throw Object.assign(new Error("missing"), { name: "NotFound" });
+      if (!object) throw Object.assign(new Error("missing"), { name: "NotFound" });
       return { ContentLength: object.size, ContentType: object.type };
     }
     if (name === "ListObjectVersionsCommand") {
@@ -133,23 +135,18 @@ function fakeStorage(t, { failPut, failDelete } = {}) {
     }
     if (name === "DeleteObjectCommand") {
       assert.equal(command.input.VersionId, `version:${key}`);
-      if (failDelete?.(key))
-        throw Object.assign(new Error("down"), { name: "InternalError" });
-      if (!objects.delete(key))
-        throw Object.assign(new Error("missing"), { name: "NoSuchKey" });
+      if (failDelete?.(key)) throw Object.assign(new Error("down"), { name: "InternalError" });
+      if (!objects.delete(key)) throw Object.assign(new Error("missing"), { name: "NoSuchKey" });
       return {};
     }
     return {};
   });
   const journal = new Map();
   t.mock.method(StorageCleanup, "bulkWrite", async (ops) => {
-    for (const op of ops)
-      journal.set(op.updateOne.filter.key, op.updateOne.update.$set);
+    for (const op of ops) journal.set(op.updateOne.filter.key, op.updateOne.update.$set);
     calls.push(["track", ops.map((op) => op.updateOne.filter.key)]);
   });
-  t.mock.method(StorageCleanup, "deleteOne", async ({ key }) =>
-    journal.delete(key),
-  );
+  t.mock.method(StorageCleanup, "deleteOne", async ({ key }) => journal.delete(key));
   t.mock.method(StorageCleanup, "updateOne", async () => ({}));
   return { objects, calls, journal };
 }
@@ -164,32 +161,23 @@ test("custom images become 1920x1080 WebP without stretching", async () => {
   near(await pixel(wide, 960, 540), [255, 0, 0]);
   near(await pixel(wide, 960, 320), [255, 0, 0]);
   near(await pixel(wide, 960, 280), [0, 0, 0]);
-  const tall = await processThumbnailImage(
-    await solid(300, 600, "#0000ff", "jpeg"),
-  );
+  const tall = await processThumbnailImage(await solid(300, 600, "#0000ff", "jpeg"));
   near(await pixel(tall, 960, 540), [0, 0, 255]);
   near(await pixel(tall, 660, 540), [0, 0, 0]);
 });
 
 test("custom thumbnails are validated by their decoded content", async () => {
-  await assert.rejects(processThumbnailImage(Buffer.from("not an image")), {
+  await assert.rejects(processThumbnailImage(Buffer.from("not an image")), { status: 415 });
+  await assert.rejects(processThumbnailImage(await solid(400, 400, "#fff", "gif")), {
     status: 415,
   });
   await assert.rejects(
-    processThumbnailImage(await solid(400, 400, "#fff", "gif")),
-    { status: 415 },
-  );
-  await assert.rejects(
     processThumbnailImage(
-      Buffer.from(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900"/>',
-      ),
+      Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900"/>'),
     ),
     { status: 415 },
   );
-  await assert.rejects(processThumbnailImage(await solid(320, 120, "#fff")), {
-    status: 422,
-  });
+  await assert.rejects(processThumbnailImage(await solid(320, 120, "#fff")), { status: 422 });
 });
 
 test(
@@ -199,10 +187,7 @@ test(
     const file = testVideo();
     for (const duration of [2, 9999, 0]) {
       const meta = await sharp(await videoThumbnail(file, duration)).metadata();
-      assert.deepEqual(
-        [meta.format, meta.width, meta.height],
-        ["webp", 1920, 1080],
-      );
+      assert.deepEqual([meta.format, meta.width, meta.height], ["webp", 1920, 1080]);
     }
     assert.deepEqual(
       readdirSync(scratch).filter((f) => f.endsWith(".png")),
@@ -243,10 +228,7 @@ test("permanent deletion lists every page, deletes exact versions before markers
       if (listings === 2) {
         assert.equal(command.input.KeyMarker, key);
         assert.equal(command.input.VersionIdMarker, "latest");
-        return {
-          Versions: [{ Key: key, VersionId: "older" }],
-          IsTruncated: false,
-        };
+        return { Versions: [{ Key: key, VersionId: "older" }], IsTruncated: false };
       }
       assert.deepEqual(deleted, ["latest", "older", "hide"]);
       return { Versions: [], DeleteMarkers: [], IsTruncated: false };
@@ -266,9 +248,7 @@ test("already-gone keys and concurrently removed versions are safe to retry", as
     deletes = 0;
   t.mock.method(s3, "send", async (command) => {
     if (command.constructor.name === "ListObjectVersionsCommand")
-      return {
-        Versions: exists ? [{ Key: "videos/gone.mp4", VersionId: "gone" }] : [],
-      };
+      return { Versions: exists ? [{ Key: "videos/gone.mp4", VersionId: "gone" }] : [] };
     deletes++;
     exists = false;
     throw Object.assign(new Error("gone"), { name: "NoSuchVersion" });
@@ -299,9 +279,7 @@ test("successful delete responses are insufficient if storage still lists a vers
       ? { Versions: [{ Key: "videos/clip.mp4", VersionId: "still-there" }] }
       : {},
   );
-  await assert.rejects(deleteObject("videos/clip.mp4"), {
-    code: "DELETE_INCOMPLETE",
-  });
+  await assert.rejects(deleteObject("videos/clip.mp4"), { code: "DELETE_INCOMPLETE" });
 });
 
 test("a denied file-version deletion keeps its hide marker for retry", async (t) => {
@@ -315,9 +293,7 @@ test("a denied file-version deletion keeps its hide marker for retry", async (t)
     deletions.push(command.input.VersionId);
     throw Object.assign(new Error("locked"), { name: "AccessDenied" });
   });
-  await assert.rejects(deleteObject("videos/clip.mp4"), {
-    name: "AccessDenied",
-  });
+  await assert.rejects(deleteObject("videos/clip.mp4"), { name: "AccessDenied" });
   assert.deepEqual(deletions, ["locked"]);
 });
 
@@ -330,15 +306,9 @@ test("invalid storage version listings fail safely without a name-only delete", 
   for (response of [
     { Versions: [{ Key: "videos/clip.mp4" }] },
     { IsTruncated: true },
-    {
-      IsTruncated: true,
-      NextKeyMarker: "videos/clip.mp4",
-      NextVersionIdMarker: "stuck",
-    },
+    { IsTruncated: true, NextKeyMarker: "videos/clip.mp4", NextVersionIdMarker: "stuck" },
   ])
-    await assert.rejects(deleteObject("videos/clip.mp4"), {
-      code: "STORAGE_MISMATCH",
-    });
+    await assert.rejects(deleteObject("videos/clip.mp4"), { code: "STORAGE_MISMATCH" });
 });
 
 function replaceHarness(t, options) {
@@ -351,14 +321,11 @@ function replaceHarness(t, options) {
     return query(filter._id === id ? doc({ ...state }) : null);
   });
   t.mock.method(Video, "exists", async (filter) =>
-    filter.$or.some((f) => f.thumbnailKey === state.thumbnailKey)
-      ? { _id: id }
-      : null,
+    filter.$or.some((f) => f.thumbnailKey === state.thumbnailKey) ? { _id: id } : null,
   );
   t.mock.method(Video, "findOneAndUpdate", (filter, update) => {
     storage.calls.push(["swap", update.$set.thumbnailKey]);
-    if (options?.conflict || filter.thumbnailKey !== state.thumbnailKey)
-      return query(null);
+    if (options?.conflict || filter.thumbnailKey !== state.thumbnailKey) return query(null);
     state.thumbnailKey = update.$set.thumbnailKey;
     return query(doc({ ...state }));
   });
@@ -378,10 +345,7 @@ test("replacing a thumbnail confirms the upload and database swap before deletin
   assert.equal(h.ownerFilter().owner, owner);
   const next = h.state.thumbnailKey;
   assert.match(next, /^thumbnail\/[0-9a-f-]{36}\.webp$/);
-  assert.match(
-    res.body.data.video.thumbnailUrl,
-    new RegExp(next.replace(".", "\\.")),
-  );
+  assert.match(res.body.data.video.thumbnailUrl, new RegExp(next.replace(".", "\\.")));
   const order = h.calls.map(([name, key]) => `${name}:${key}`);
   assert.deepEqual(order, [
     `track:${next},thumbnail/old.webp`,
@@ -394,17 +358,12 @@ test("replacing a thumbnail confirms the upload and database swap before deletin
   ]);
   assert.deepEqual([...h.objects.keys()], [next]);
   const stored = await sharp(h.objects.get(next).body).metadata();
-  assert.deepEqual(
-    [stored.format, stored.width, stored.height],
-    ["webp", 1920, 1080],
-  );
+  assert.deepEqual([stored.format, stored.width, stored.height], ["webp", 1920, 1080]);
   assert.equal(h.journal.size, 0);
 });
 
 test("a failed replacement keeps the existing thumbnail and removes the new upload", async (t) => {
-  const h = replaceHarness(t, {
-    failPut: (key) => key !== "thumbnail/old.webp",
-  });
+  const h = replaceHarness(t, { failPut: (key) => key !== "thumbnail/old.webp" });
   const res = await h.send(await solid(800, 800, "#00ff00"));
   assert.equal(res.status, 502);
   assert.match(res.body.error.message, /current thumbnail was kept/);
@@ -412,10 +371,7 @@ test("a failed replacement keeps the existing thumbnail and removes the new uplo
   assert.deepEqual([...h.objects.keys()], ["thumbnail/old.webp"]);
   assert.ok(!h.calls.some(([name]) => name === "swap"));
   assert.ok(
-    !h.calls.some(
-      ([name, key]) =>
-        name === "DeleteObjectCommand" && key === "thumbnail/old.webp",
-    ),
+    !h.calls.some(([name, key]) => name === "DeleteObjectCommand" && key === "thumbnail/old.webp"),
   );
   assert.equal(h.journal.size, 0);
 });
@@ -459,27 +415,16 @@ function deleteHarness(t, options) {
     if (f._id !== id || !record.exists) return query(null);
     record.status = update.$set.status;
     return query(
-      doc({
-        key: "videos/v.mp4",
-        thumbnailKey: "thumbnail/t.webp",
-        status: record.status,
-      }),
+      doc({ key: "videos/v.mp4", thumbnailKey: "thumbnail/t.webp", status: record.status }),
     );
   });
   t.mock.method(Video, "deleteOne", async (f) => {
     assert.equal(f.status, "deleting");
-    assert.equal(
-      storage.objects.size,
-      0,
-      "MongoDB record must outlive all stored objects",
-    );
+    assert.equal(storage.objects.size, 0, "MongoDB record must outlive all stored objects");
     record.exists = false;
   });
   const send = () =>
-    request(app)
-      .delete(`/api/videos/${id}`)
-      .set("Authorization", auth)
-      .set("Origin", origin);
+    request(app).delete(`/api/videos/${id}`).set("Authorization", auth).set("Origin", origin);
   return { ...storage, record, send, filter: () => filter };
 }
 
@@ -501,9 +446,7 @@ test("already-missing objects do not block deletion", async (t) => {
 
 test("a partial deletion failure keeps the record for a safe retry", async (t) => {
   let down = true;
-  const h = deleteHarness(t, {
-    failDelete: (key) => down && key === "thumbnail/t.webp",
-  });
+  const h = deleteHarness(t, { failDelete: (key) => down && key === "thumbnail/t.webp" });
   const first = await h.send();
   assert.equal(first.status, 503);
   assert.equal(first.body.error.code, "DELETE_INCOMPLETE");
@@ -533,9 +476,7 @@ function ingestHarness(t, options = {}) {
   t.mock.method(Video, "exists", async (filter) =>
     created.some((v) =>
       filter.$or.some(
-        (f) =>
-          (f.key && f.key === v.key) ||
-          (f.thumbnailKey && f.thumbnailKey === v.thumbnailKey),
+        (f) => (f.key && f.key === v.key) || (f.thumbnailKey && f.thumbnailKey === v.thumbnailKey),
       ),
     )
       ? { _id: id }
@@ -550,7 +491,9 @@ function ingestHarness(t, options = {}) {
       .attach("file", file, "Clip.mp4");
   return { ...storage, created, send };
 }
+
 const uploadTemps = () => new Set(readdirSync(uploadDir));
+
 // Temp files are removed in a finally block that runs just after the response is sent.
 async function newTemps(before) {
   for (let i = 0; i < 50; i++) {
@@ -576,15 +519,9 @@ test(
     assert.equal(res.body.data.warning, undefined);
     // Keys are journaled before any object is written.
     assert.equal(h.calls[0][0], "track");
-    assert.deepEqual(
-      h.calls[0][1].sort(),
-      [video.key, video.thumbnailKey].sort(),
-    );
+    assert.deepEqual(h.calls[0][1].sort(), [video.key, video.thumbnailKey].sort());
     const meta = await sharp(h.objects.get(video.thumbnailKey).body).metadata();
-    assert.deepEqual(
-      [meta.format, meta.width, meta.height],
-      ["webp", 1920, 1080],
-    );
+    assert.deepEqual([meta.format, meta.width, meta.height], ["webp", 1920, 1080]);
     // B2 treats PutObjectTagging as PutObject and would replace the video with tag XML.
     assert.ok(!h.calls.some(([name]) => name === "PutObjectTaggingCommand"));
     assert.equal(h.objects.get(video.key).size, video.size);
@@ -593,25 +530,19 @@ test(
   },
 );
 
-test(
-  "a failed database write removes both uploaded objects",
-  { skip: !hasFfmpeg },
-  async (t) => {
-    const h = ingestHarness(t, { failCreate: true });
-    const res = await h.send(testVideo());
-    assert.equal(res.status, 500);
-    assert.equal(h.objects.size, 0);
-    assert.equal(h.journal.size, 0);
-  },
-);
+test("a failed database write removes both uploaded objects", { skip: !hasFfmpeg }, async (t) => {
+  const h = ingestHarness(t, { failCreate: true });
+  const res = await h.send(testVideo());
+  assert.equal(res.status, 500);
+  assert.equal(h.objects.size, 0);
+  assert.equal(h.journal.size, 0);
+});
 
 test(
   "a thumbnail storage failure keeps the video and reports a warning",
   { skip: !hasFfmpeg },
   async (t) => {
-    const h = ingestHarness(t, {
-      failPut: (key) => key.startsWith("thumbnail/"),
-    });
+    const h = ingestHarness(t, { failPut: (key) => key.startsWith("thumbnail/") });
     const res = await h.send(testVideo());
     assert.equal(res.status, 201);
     assert.match(res.body.data.warning, /thumbnail could not be created/);
@@ -633,11 +564,7 @@ test("the cleanup worker finishes stuck deletions and removes unreferenced objec
   t.mock.method(Video, "find", () => ({
     select: () => ({
       limit: async () => [
-        doc({
-          key: "videos/stuck.mp4",
-          thumbnailKey: "thumbnail/stuck.webp",
-          status: "deleting",
-        }),
+        doc({ key: "videos/stuck.mp4", thumbnailKey: "thumbnail/stuck.webp", status: "deleting" }),
       ],
     }),
   }));
@@ -649,9 +576,7 @@ test("the cleanup worker finishes stuck deletions and removes unreferenced objec
     return key ? { key } : null;
   });
   t.mock.method(Video, "exists", async (filter) =>
-    filter.$or.some((f) => f.thumbnailKey === "thumbnail/live.webp")
-      ? { _id: id }
-      : null,
+    filter.$or.some((f) => f.thumbnailKey === "thumbnail/live.webp") ? { _id: id } : null,
   );
   const tempDir = mkdtempSync(path.join(os.tmpdir(), "frame-sweep-test-"));
   writeFileSync(path.join(tempDir, "old.mp4"), "x");

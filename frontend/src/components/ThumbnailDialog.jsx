@@ -9,12 +9,14 @@ import {
   thumbnailSizeError,
 } from "../services/thumbnail";
 import Modal from "./Modal";
+
 async function imageSize(file) {
   const bitmap = await createImageBitmap(file);
   const size = { width: bitmap.width, height: bitmap.height };
   bitmap.close();
   return size;
 }
+
 export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
   const [file, setFile] = useState(null),
     [preview, setPreview] = useState(""),
@@ -29,6 +31,7 @@ export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
     },
     [preview],
   );
+
   async function choose(selected) {
     if (input.current) input.current.value = "";
     if (!selected) return;
@@ -48,16 +51,13 @@ export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
     setFile(selected);
     setPreview(URL.createObjectURL(selected));
   }
+
   async function save() {
     setSaving(true);
     setError("");
     setProgress(0);
     try {
-      const { video: updated } = await api.replaceThumbnail(
-        video.id,
-        file,
-        setProgress,
-      );
+      const { video: updated } = await api.replaceThumbnail(video.id, file, setProgress);
       toast.success("Thumbnail updated");
       onSaved(updated);
     } catch (err) {
@@ -66,6 +66,7 @@ export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
       setSaving(false);
     }
   }
+
   return (
     <Modal
       title="Change thumbnail"
@@ -76,29 +77,16 @@ export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
           <button className="btn secondary" disabled={saving} onClick={onClose}>
             Cancel
           </button>
-          <button
-            className="btn primary"
-            disabled={!file || saving}
-            onClick={save}
-          >
-            {saving ? (
-              <LoaderCircle className="spin" size={16} />
-            ) : (
-              <ImageUp size={16} />
-            )}
-            {saving
-              ? progress < 100
-                ? `Uploading ${progress}%`
-                : "Saving…"
-              : "Save thumbnail"}
+          <button className="btn primary" disabled={!file || saving} onClick={save}>
+            {saving ? <LoaderCircle className="spin" size={16} /> : <ImageUp size={16} />}
+            {saving ? (progress < 100 ? `Uploading ${progress}%` : "Saving…") : "Save thumbnail"}
           </button>
         </>
       }
     >
       <p className="modal-intro">
-        Choose a new image for <strong>{video.name}</strong>. It’s saved as a
-        1920 × 1080 WebP. Other shapes get bars at the edges and are never
-        stretched.
+        Choose a new image for <strong>{video.name}</strong>. It’s saved as a 1920 × 1080 WebP.
+        Other shapes get bars at the edges and are never stretched.
       </p>
       <div className="thumbnail-compare">
         <figure>
@@ -142,8 +130,8 @@ export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
         </figure>
       </div>
       <p className="thumbnail-hint">
-        JPEG, PNG, or WebP · Up to {formatBytes(maxSize, 0)} · At least{" "}
-        {MIN_THUMBNAIL_SIDE} px on each side
+        JPEG, PNG, or WebP · Up to {formatBytes(maxSize, 0)} · At least {MIN_THUMBNAIL_SIDE} px on
+        each side
       </p>
       <input
         ref={input}

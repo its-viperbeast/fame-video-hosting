@@ -112,9 +112,7 @@ export function UploadBanner({ onUpload, maxSize, onDrop }) {
         <span className="art-dot" />
       </div>
       <div className="upload-banner-copy">
-        <div className="upload-banner-eyebrow">
-          MAKE ROOM FOR YOUR NEXT BIG IDEA
-        </div>
+        <div className="upload-banner-eyebrow">MAKE ROOM FOR YOUR NEXT BIG IDEA</div>
         <h2>Drop it. Upload it. Make it yours.</h2>
         <p>Drag & drop your videos here, or choose a file to get started.</p>
         <span>
@@ -186,9 +184,7 @@ export default function Dashboard({
     try {
       await api.favorite(video.id, !video.favorite);
       onRefresh(undefined, { silent: true });
-      toast.success(
-        video.favorite ? "Removed from favorites" : "Added to favorites",
-      );
+      toast.success(video.favorite ? "Removed from favorites" : "Added to favorites");
     } catch (err) {
       toast.error(err.message);
     }
@@ -230,14 +226,11 @@ export default function Dashboard({
     setBusy(true);
     setDeleteError("");
     const { deleted, failed, error } = await removeEach(deleting, api.remove);
-    if (deleted)
-      toast.success(`${deleted > 1 ? `${deleted} videos` : "Video"} deleted`);
+    if (deleted) toast.success(`${deleted > 1 ? `${deleted} videos` : "Video"} deleted`);
     if (failed.length) {
       setDeleting(failed);
       setDeleteError(error.message);
-      setSelected((prev) =>
-        prev.filter((id) => failed.some((video) => video.id === id)),
-      );
+      setSelected((prev) => prev.filter((id) => failed.some((video) => video.id === id)));
     } else {
       setDeleting(null);
       setSelected([]);
@@ -253,17 +246,12 @@ export default function Dashboard({
 
   function metadataSaved(updated) {
     setMetadataFor(null);
-    setPlayer((current) =>
-      current?.id === updated.id ? { ...current, ...updated } : current,
-    );
+    setPlayer((current) => (current?.id === updated.id ? { ...current, ...updated } : current));
     onRefresh(undefined, { silent: true });
   }
 
   const titles = {
-    favorites: [
-      "The ones you love.",
-      "Keep your favorite frames a little closer.",
-    ],
+    favorites: ["The ones you love.", "Keep your favorite frames a little closer."],
     all: [
       "Your library at a glance.",
       "A home for your videos. A little space for your creativity.",
@@ -272,12 +260,7 @@ export default function Dashboard({
   const title = titles[filter] || titles.all;
   const tabs = [
     { key: "all", text: "All videos", icon: Film, count: stats.total },
-    {
-      key: "favorites",
-      text: "Favorites",
-      icon: Star,
-      count: stats.favorites,
-    },
+    { key: "favorites", text: "Favorites", icon: Star, count: stats.favorites },
   ];
   const libraryTitle = filter === "favorites" ? "Favorites" : "All videos";
   const libraryCount = filter === "favorites" ? stats.favorites : stats.total;
@@ -339,11 +322,7 @@ export default function Dashboard({
                 </button>
               </form>
               {loading ? (
-                <div
-                  className="overview-loading"
-                  role="status"
-                  aria-label="Loading workspace"
-                >
+                <div className="overview-loading" role="status" aria-label="Loading workspace">
                   <div className="metric-grid" aria-hidden="true">
                     {Array.from({ length: 4 }, (_, index) => (
                       <div className="metric-card" key={index}>
@@ -372,10 +351,7 @@ export default function Dashboard({
                       <h2>Recently added</h2>
                       <p>Pick up where you left off.</p>
                     </div>
-                    <button
-                      className="text-link"
-                      onClick={() => navigate("/videos")}
-                    >
+                    <button className="text-link" onClick={() => navigate("/videos")}>
                       View all videos
                       <ArrowRight size={15} />
                     </button>
@@ -395,12 +371,8 @@ export default function Dashboard({
                         onCopyLink={copyLink}
                         onFavorite={favorite}
                         onThumbnail={setThumbnailFor}
-                        onRename={(item) =>
-                          setMetadataFor({ video: item, field: "name" })
-                        }
-                        onNote={(item) =>
-                          setMetadataFor({ video: item, field: "note" })
-                        }
+                        onRename={(item) => setMetadataFor({ video: item, field: "name" })}
+                        onNote={(item) => setMetadataFor({ video: item, field: "note" })}
                       />
                     ))}
                   </div>
@@ -519,16 +491,12 @@ export default function Dashboard({
             selected={selected}
             onSelect={(id) =>
               setSelected((prev) =>
-                prev.includes(id)
-                  ? prev.filter((item) => item !== id)
-                  : [...prev, id],
+                prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
               )
             }
             onClearSelection={() => setSelected([])}
             onBulkDelete={() =>
-              confirmDelete(
-                data.videos.filter((video) => selected.includes(video.id)),
-              )
+              confirmDelete(data.videos.filter((video) => selected.includes(video.id)))
             }
             onPage={(nextPage) =>
               navigate(`${location.pathname}?filter=${filter}&page=${nextPage}`)
@@ -558,13 +526,7 @@ export default function Dashboard({
         </span>
       </footer>
 
-      {player && (
-        <VideoPlayer
-          key={player.id}
-          video={player}
-          onClose={() => setPlayer(null)}
-        />
-      )}
+      {player && <VideoPlayer key={player.id} video={player} onClose={() => setPlayer(null)} />}
       {thumbnailFor && (
         <ThumbnailDialog
           key={thumbnailFor.id}
@@ -590,23 +552,11 @@ export default function Dashboard({
           className="delete-modal"
           footer={
             <>
-              <button
-                className="btn secondary"
-                disabled={busy}
-                onClick={() => setDeleting(null)}
-              >
+              <button className="btn secondary" disabled={busy} onClick={() => setDeleting(null)}>
                 Keep {deleting.length > 1 ? "videos" : "video"}
               </button>
-              <button
-                className="btn danger"
-                disabled={busy}
-                onClick={deleteVideos}
-              >
-                {busy ? (
-                  <LoaderCircle className="spin" size={16} />
-                ) : (
-                  <Trash2 size={16} />
-                )}
+              <button className="btn danger" disabled={busy} onClick={deleteVideos}>
+                {busy ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
                 {deleteError ? "Try again" : "Delete permanently"}
               </button>
             </>

@@ -18,9 +18,7 @@ export async function assertFileMp4(filePath) {
 
 function run(args, signal, timeoutMs, failure) {
   return new Promise((resolve, reject) => {
-    const child = spawn(env.FFMPEG_PATH, args, {
-      stdio: ["ignore", "ignore", "pipe"],
-    });
+    const child = spawn(env.FFMPEG_PATH, args, { stdio: ["ignore", "ignore", "pipe"] });
     let stderr = "";
     const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
     const stop = () => child.kill("SIGKILL");
@@ -35,13 +33,7 @@ function run(args, signal, timeoutMs, failure) {
     child.on("error", (error) => {
       finish();
       if (error.code === "ENOENT") {
-        reject(
-          new HttpError(
-            422,
-            "ffmpeg is not available on the server.",
-            "FFMPEG_UNAVAILABLE",
-          ),
-        );
+        reject(new HttpError(422, "ffmpeg is not available on the server.", "FFMPEG_UNAVAILABLE"));
         return;
       }
       reject(error);
@@ -67,12 +59,7 @@ export const remux = (inputPath, outputPath, signal) =>
     resolveFfmpegArgs(env.FFMPEG_ARGS, inputPath, outputPath),
     signal,
     30 * 60 * 1000,
-    () =>
-      new HttpError(
-        422,
-        "This video could not be prepared for playback.",
-        "FFMPEG_FAILED",
-      ),
+    () => new HttpError(422, "This video could not be prepared for playback.", "FFMPEG_FAILED"),
   );
 
 // Seeking past the end exits successfully without writing a file; callers check the output.
@@ -105,9 +92,5 @@ export const extractFrame = (inputPath, outputPath, seconds, signal) =>
     signal,
     2 * 60 * 1000,
     () =>
-      new HttpError(
-        422,
-        "A thumbnail could not be created from this video.",
-        "THUMBNAIL_FAILED",
-      ),
+      new HttpError(422, "A thumbnail could not be created from this video.", "THUMBNAIL_FAILED"),
   );

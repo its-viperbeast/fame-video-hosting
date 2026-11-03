@@ -68,9 +68,7 @@ test("the play endpoint returns the public link only for the owner's video", asy
     filter = f;
     return { select: async () => (f._id === id ? video : null) };
   });
-  const res = await request(app)
-    .get(`/api/videos/${id}/play`)
-    .set("Authorization", auth);
+  const res = await request(app).get(`/api/videos/${id}/play`).set("Authorization", auth);
   assert.equal(res.status, 200);
   assert.equal(res.body.data.url, `https://media.example.com/${video.key}`);
   assert.equal(filter.owner, owner);
@@ -104,19 +102,11 @@ test("library responses carry the public thumbnail link", async (t) => {
 
 test("MEDIA_BASE_URL must be https, and is optional", () => {
   const base = { ...process.env };
+  assert.equal(parseEnv({ ...base, MEDIA_BASE_URL: "" }).MEDIA_BASE_URL, undefined);
   assert.equal(
-    parseEnv({ ...base, MEDIA_BASE_URL: "" }).MEDIA_BASE_URL,
-    undefined,
-  );
-  assert.equal(
-    parseEnv({ ...base, MEDIA_BASE_URL: "https://cdn.example.com/media/" })
-      .MEDIA_BASE_URL,
+    parseEnv({ ...base, MEDIA_BASE_URL: "https://cdn.example.com/media/" }).MEDIA_BASE_URL,
     "https://cdn.example.com/media",
   );
-  for (const bad of [
-    "http://media.example.com",
-    "https://media.example.com/?token=1",
-    "not a url",
-  ])
+  for (const bad of ["http://media.example.com", "https://media.example.com/?token=1", "not a url"])
     assert.throws(() => parseEnv({ ...base, MEDIA_BASE_URL: bad }));
 });

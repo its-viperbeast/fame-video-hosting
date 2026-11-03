@@ -11,9 +11,7 @@ import mongoose from "mongoose";
 async function main() {
   await connectDB();
   await ensureAdmin();
-  const uploads = await mongoose.connection.db
-    .listCollections({ name: "uploads" })
-    .toArray();
+  const uploads = await mongoose.connection.db.listCollections({ name: "uploads" }).toArray();
   if (uploads.length) {
     await mongoose.connection.dropCollection("uploads");
     console.info("Removed unused uploads collection");
