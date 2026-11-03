@@ -6,6 +6,7 @@ import {
   Ellipsis,
   FileVideo,
   ImageUp,
+  Link,
   NotebookPen,
   Pencil,
   Play,
@@ -98,6 +99,7 @@ export default function VideoCard({
   onPlay,
   onDelete,
   onDownload,
+  onCopyLink,
   onFavorite,
   onThumbnail,
   onRename,
@@ -227,6 +229,16 @@ export default function VideoCard({
                   >
                     <Download size={15} />
                     Download
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setMenu(false);
+                      onCopyLink(video);
+                    }}
+                  >
+                    <Link size={15} />
+                    Copy link
                   </button>
                   <button
                     role="menuitem"

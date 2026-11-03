@@ -280,7 +280,7 @@ function Root() {
         </Routes>
       )}
       <ToastContainer
-        position="bottom-right"
+        position="top-right"
         autoClose={3500}
         hideProgressBar
         theme={dark ? "dark" : "light"}

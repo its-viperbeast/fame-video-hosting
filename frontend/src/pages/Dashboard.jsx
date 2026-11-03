@@ -210,6 +210,16 @@ export default function Dashboard({
     }
   }
 
+  async function copyLink(video) {
+    try {
+      const { url } = await api.play(video.id);
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied");
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }
+
   function confirmDelete(videos) {
     setDeleteError("");
     setDeleting(videos);
@@ -382,6 +392,7 @@ export default function Dashboard({
                         onPlay={setPlayer}
                         onDelete={(item) => confirmDelete([item])}
                         onDownload={download}
+                        onCopyLink={copyLink}
                         onFavorite={favorite}
                         onThumbnail={setThumbnailFor}
                         onRename={(item) =>
@@ -536,6 +547,7 @@ export default function Dashboard({
             onPlay={setPlayer}
             onDelete={(video) => confirmDelete([video])}
             onDownload={download}
+            onCopyLink={copyLink}
             onFavorite={favorite}
             onThumbnail={setThumbnailFor}
             onRename={(video) => setMetadataFor({ video, field: "name" })}
