@@ -13,7 +13,6 @@ const schema = z.object({
   AWS_ACCESS_KEY_ID: z.string().min(1),
   AWS_SECRET_ACCESS_KEY: z.string().min(1),
   FRONTEND_URL: z.url(),
-  APP_BASE_URL: z.url(),
   SESSION_SECRET: z.string().min(32),
   AUTH_EMAIL: z.email(),
   AUTH_PASSWORD_HASH: z.string().regex(/^[a-f0-9]{32}:[a-f0-9]{128}$/),

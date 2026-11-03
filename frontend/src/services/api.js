@@ -121,7 +121,7 @@ export const api = {
   },
 };
 export function formatBytes(bytes, decimals = 1) {
-  if (!bytes) return "0 MB";
+  if (!bytes) return "0 B";
   const unit = Math.max(
     0,
     Math.min(4, Math.floor(Math.log(bytes) / Math.log(1024))),

@@ -1,7 +1,7 @@
 import { app } from "./app.js";
 import { connectDB } from "./config/db.js";
 import { env } from "./config/env.js";
-import { uploadDir } from "./routes/videoRoutes.js";
+import { ensureUploadDir, uploadDir } from "./routes/videoRoutes.js";
 import { ensureAdmin } from "./services/adminService.js";
 import { startCleanupWorker } from "./services/cleanupService.js";
 import mongoose from "mongoose";
@@ -25,6 +25,7 @@ async function main() {
       if (![26, 27].includes(error.code)) throw error;
     });
   // Retries interrupted deletions and removes objects from abandoned or failed uploads.
+  ensureUploadDir();
   const stopCleanup = startCleanupWorker({ tempDir: uploadDir });
   const server = app.listen(env.PORT, () =>
     console.info(`Frame API listening on http://localhost:${env.PORT}`),
@@ -37,8 +38,13 @@ async function main() {
     process.on(signal, () => {
       stopCleanup();
       server.close(async () => {
-        await mongoose.disconnect();
-        process.exit(0);
+        try {
+          await mongoose.disconnect();
+          process.exit(0);
+        } catch (error) {
+          console.error(error);
+          process.exit(1);
+        }
       });
       setTimeout(() => process.exit(1), 10000).unref();
     });

@@ -5,12 +5,10 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
   ListObjectVersionsCommand,
-  CreateMultipartUploadCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "../config/aws.js";
 import { env } from "../config/env.js";
-import { assertMp4 } from "../utils/validation.js";
 import { HttpError } from "../utils/http.js";
 const base = (key) => ({ Bucket: env.AWS_S3_BUCKET, Key: key });
 const sign = (command, options = {}) =>
@@ -56,56 +54,6 @@ export async function putThumbnail(key, body, signal) {
       "The thumbnail was not stored correctly.",
       "STORAGE_MISMATCH",
     );
-}
-export async function createUpload(session) {
-  const options = {
-    ...base(session.key),
-    ContentType: "video/mp4",
-    Tagging: "status=pending",
-    Metadata: {
-      "upload-id": session.id,
-      owner: Buffer.from(session.owner).toString("base64url"),
-    },
-  };
-  if (session.size >= 100 * 1024 ** 2) {
-    const data = await s3.send(new CreateMultipartUploadCommand(options));
-    return { multipartId: data.UploadId, partSize: 16 * 1024 ** 2 };
-  }
-  const url = await sign(
-    new PutObjectCommand({
-      ...options,
-      ContentLength: session.size,
-      IfNoneMatch: "*",
-    }),
-    {
-      signableHeaders: new Set([
-        "content-type",
-        "content-length",
-        "if-none-match",
-      ]),
-    },
-  );
-  return {
-    url,
-    headers: { "Content-Type": "video/mp4", "If-None-Match": "*" },
-  };
-}
-export async function verifyObject(session) {
-  const head = await s3.send(new HeadObjectCommand(base(session.key)));
-  if (
-    head.ContentLength !== session.size ||
-    head.ContentType !== "video/mp4" ||
-    head.Metadata?.["upload-id"] !== session.id
-  )
-    throw new HttpError(
-      422,
-      "Uploaded file does not match its upload session.",
-      "UPLOAD_MISMATCH",
-    );
-  const content = await s3.send(
-    new GetObjectCommand({ ...base(session.key), Range: "bytes=0-4095" }),
-  );
-  assertMp4(await content.Body.transformToByteArray());
 }
 // No object tagging: B2 ignores the ?tagging subresource and treats
 // PutObjectTagging as PutObject, replacing the video with the tag XML.

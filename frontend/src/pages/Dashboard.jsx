@@ -460,11 +460,7 @@ export default function Dashboard({
               <input
                 placeholder="Search your videos…"
                 value={search}
-                onChange={(event) => {
-                  onSearch(event.target.value);
-                  if (page !== 1)
-                    navigate(`${location.pathname}?filter=${filter}&page=1`);
-                }}
+                onChange={(event) => onSearch(event.target.value)}
                 aria-label="Search your video collection"
               />
               {search && (
@@ -482,11 +478,7 @@ export default function Dashboard({
                 <ArrowDownUp size={15} />
                 <select
                   value={sort}
-                  onChange={(event) => {
-                    onSort(event.target.value);
-                    if (page !== 1)
-                      navigate(`${location.pathname}?filter=${filter}&page=1`);
-                  }}
+                  onChange={(event) => onSort(event.target.value)}
                   aria-label="Sort videos"
                 >
                   <option value="newest">Newest first</option>

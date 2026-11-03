@@ -152,7 +152,13 @@ export async function ingest(req, res) {
         )
       : !signal.aborted;
     if (!kept) {
-      await deleteOwnedVideo(req.user.id, video.id).catch(() => {});
+      await deleteOwnedVideo(req.user.id, video.id).catch((error) =>
+        console.error({
+          rollback: video.id,
+          code: error.name,
+          message: error.message,
+        }),
+      );
       throw cancelled();
     }
     await cleanup.reconcile(tracked);

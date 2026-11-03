@@ -108,7 +108,12 @@ export default function VideoUpload({
     async (files) => {
       inspections.current++;
       setInspecting(true);
-      for (const file of Array.from(files).slice(0, 20)) {
+      const selected = Array.from(files);
+      if (selected.length > 20)
+        toast.warning(
+          `Only the first 20 of ${selected.length} videos were added.`,
+        );
+      for (const file of selected.slice(0, 20)) {
         if (
           !/\.mp4$/i.test(file.name) ||
           (file.type && file.type !== "video/mp4")
@@ -194,6 +199,8 @@ export default function VideoUpload({
     if (item) {
       URL.revokeObjectURL(item.url);
       objectUrls.current.delete(item.url);
+      // The preview modal plays that same object URL, so close it too.
+      if (preview?.id === id) setPreview(null);
     }
     setItems((prev) => prev.filter((i) => i.id !== id));
   }

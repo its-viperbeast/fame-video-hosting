@@ -19,7 +19,6 @@ Object.assign(process.env, {
   AWS_ACCESS_KEY_ID: "test-key",
   AWS_SECRET_ACCESS_KEY: "test-secret",
   FRONTEND_URL: "http://localhost:5173",
-  APP_BASE_URL: "http://localhost:9090",
   SESSION_SECRET: "s".repeat(40),
   AUTH_EMAIL: "admin@example.com",
   AUTH_PASSWORD_HASH: `${salt}:${scryptSync("correct-test-password", salt, 64).toString("hex")}`,

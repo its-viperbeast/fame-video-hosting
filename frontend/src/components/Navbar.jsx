@@ -161,7 +161,9 @@ export function Header({ onMenu, menuOpen }) {
       ? "Upload videos"
       : pathname === "/videos"
         ? "All videos"
-        : "Overview";
+        : pathname === "/change-password"
+          ? "Change password"
+          : "Overview";
   return (
     <header className="topbar">
       <div className="topbar-breadcrumb">

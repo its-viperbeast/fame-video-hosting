@@ -56,7 +56,11 @@ export function errorHandler(err, req, res, _next) {
     if (!(err instanceof HttpError))
       message = "Something went wrong. Please try again.";
   }
-  if (res.headersSent) return;
+  if (res.headersSent) {
+    // A partial response is already on its way; close the socket so the client doesn't hang.
+    res.end();
+    return;
+  }
   res
     .status(status)
     .json({ success: false, error: { code, message, requestId } });

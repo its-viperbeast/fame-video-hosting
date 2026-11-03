@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   LoaderCircle,
@@ -66,7 +66,9 @@ export function Player({ video, getSource }) {
             controls
             playsInline
             preload="metadata"
-            autoPlay={!restore.current || restore.current.playing}
+            // Play/pause state after a refresh is restored in onLoadedMetadata,
+            // which always runs before autoplay can start.
+            autoPlay
             onLoadedMetadata={() => {
               if (restore.current) {
                 player.current.currentTime = restore.current.time;
@@ -135,7 +137,7 @@ export function Player({ video, getSource }) {
   );
 }
 export default function VideoPlayer({ video, onClose }) {
-  const getSource = useRef(() => api.play(video.id)).current;
+  const getSource = useCallback(() => api.play(video.id), [video.id]);
   return (
     <Modal title="Video preview" className="player-modal" onClose={onClose}>
       <Player video={video} getSource={getSource} />

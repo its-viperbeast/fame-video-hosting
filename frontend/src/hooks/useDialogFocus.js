@@ -1,5 +1,9 @@
 import { useEffect, useRef } from "react";
 
+// Stacked dialogs share one body scroll lock; only the last close restores it.
+let scrollLocks = 0;
+let savedOverflow = "";
+
 export default function useDialogFocus(ref, active, onClose) {
   const close = useRef(onClose);
   close.current = onClose;
@@ -7,8 +11,10 @@ export default function useDialogFocus(ref, active, onClose) {
   useEffect(() => {
     if (!active) return;
     const previous = document.activeElement;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (scrollLocks++ === 0) {
+      savedOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+    }
     const focusable = () =>
       [
         ...ref.current.querySelectorAll(
@@ -53,7 +59,7 @@ export default function useDialogFocus(ref, active, onClose) {
     };
     document.addEventListener("keydown", key);
     return () => {
-      document.body.style.overflow = overflow;
+      if (--scrollLocks === 0) document.body.style.overflow = savedOverflow;
       document.removeEventListener("keydown", key);
       if (previous?.isConnected) previous.focus();
     };

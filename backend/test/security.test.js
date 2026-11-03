@@ -14,7 +14,6 @@ Object.assign(process.env, {
   AWS_ACCESS_KEY_ID: "test-key",
   AWS_SECRET_ACCESS_KEY: "test-secret",
   FRONTEND_URL: "http://localhost:5173",
-  APP_BASE_URL: "http://localhost:9090",
   SESSION_SECRET: "s".repeat(40),
   AUTH_EMAIL: "admin@example.com",
   AUTH_PASSWORD_HASH: `${salt}:${scryptSync("correct-test-password", salt, 64).toString("hex")}`,
@@ -25,8 +24,7 @@ const { app } = await import("../app.js");
 const { fileSchema, validateMp4Header, escapeRegex } =
   await import("../utils/validation.js");
 const { s3 } = await import("../config/aws.js");
-const { verifyObject, createUpload, playbackUrl } =
-  await import("../services/s3Service.js");
+const { playbackUrl } = await import("../services/s3Service.js");
 const { default: Video } = await import("../models/Video.js");
 const { default: Admin } = await import("../models/Admin.js");
 const { default: StorageCleanup } = await import("../models/StorageCleanup.js");
@@ -138,6 +136,30 @@ test("wrong role, owner, audience, and expired sessions are rejected", async () 
       401,
     );
 });
+test("database failures return 500 while invalid sessions still return 401", async (t) => {
+  let lookups = 0;
+  t.mock.method(Admin, "findOne", async () => {
+    lookups++;
+    throw new Error("Database unavailable");
+  });
+  const outage = await request(app)
+    .get("/api/auth/me")
+    .set("Authorization", auth());
+  assert.equal(outage.status, 500);
+  assert.equal(outage.body.error.code, "INTERNAL_ERROR");
+  assert.equal(
+    outage.body.error.message,
+    "Something went wrong. Please try again.",
+  );
+
+  const invalid = await request(app)
+    .get("/api/auth/me")
+    .set("Authorization", "Bearer invalid-token");
+  assert.equal(invalid.status, 401);
+  assert.equal(invalid.body.error.code, "UNAUTHORIZED");
+  assert.equal(lookups, 1);
+});
+
 test("strict upload validation rejects path traversal, MIME spoofing, oversized and extra fields", () => {
   const valid = { name: "Film.mp4", size: 1024, mimeType: "video/mp4" };
   assert.equal(fileSchema(2048).parse(valid).name, "Film.mp4");
@@ -350,46 +372,7 @@ test("all MongoDB models save without version keys and enforce note limits", asy
   const video = new Video({ note: "a".repeat(5001) });
   assert.ok(video.validateSync().errors.note);
 });
-test("S3 verification checks exact size, MIME type, session metadata and MP4 bytes", async () => {
-  const session = { id: "upload-test", key: "videos/test.mp4", size: 24 };
-  let head = {
-      ContentLength: 24,
-      ContentType: "video/mp4",
-      Metadata: { "upload-id": session.id },
-    },
-    bytes = mp4();
-  const method = mock.method(s3, "send", async (command) =>
-    command.constructor.name === "HeadObjectCommand"
-      ? head
-      : { Body: { transformToByteArray: async () => bytes } },
-  );
-  try {
-    await verifyObject(session);
-    head = { ...head, ContentLength: 99 };
-    await assert.rejects(verifyObject(session), { status: 422 });
-    head = { ...head, ContentLength: 24, ContentType: "text/html" };
-    await assert.rejects(verifyObject(session), { status: 422 });
-    head = { ...head, ContentType: "video/mp4" };
-    bytes = Buffer.from("forged content");
-    await assert.rejects(verifyObject(session), { status: 415 });
-  } finally {
-    method.mock.restore();
-  }
-});
-test("single uploads are immutable presigned PUTs; playback signs private GETs", async () => {
-  const result = await createUpload({
-    id: "test",
-    owner: "admin@example.com",
-    key: "videos/test.mp4",
-    size: 100,
-  });
-  const url = new URL(result.url);
-  assert.equal(url.host, "s3.us-west-004.backblazeb2.com");
-  assert.equal(url.pathname, "/frame-test-bucket/videos/test.mp4");
-  assert.equal(result.headers["If-None-Match"], "*");
-  assert.equal(result.headers["Content-Type"], "video/mp4");
-  assert.match(url.searchParams.get("X-Amz-SignedHeaders"), /content-length/);
-  assert.match(url.searchParams.get("X-Amz-SignedHeaders"), /if-none-match/);
+test("playback signs private GETs", async () => {
   const playback = await playbackUrl({
     key: "videos/test.mp4",
     name: "My film.mp4",

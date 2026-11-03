@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
+import { chmodSync, mkdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { Router } from "express";
@@ -11,7 +11,12 @@ import * as c from "../controllers/videoController.js";
 const router = Router();
 router.use(requireAuth);
 export const uploadDir = path.join(os.tmpdir(), "frame-uploads");
-mkdirSync(uploadDir, { recursive: true });
+// Created lazily so importing the router has no filesystem side effects.
+// 0o700 keeps in-progress uploads private from other local users.
+export function ensureUploadDir() {
+  mkdirSync(uploadDir, { recursive: true, mode: 0o700 });
+  chmodSync(uploadDir, 0o700);
+}
 const headerUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 4096, files: 1, fields: 0, parts: 1 },
@@ -44,7 +49,14 @@ const thumbnailUpload = multer({
 });
 const videoUpload = multer({
   storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, uploadDir),
+    destination: (_req, _file, cb) => {
+      try {
+        ensureUploadDir();
+        cb(null, uploadDir);
+      } catch (error) {
+        cb(error);
+      }
+    },
     filename: (_req, _file, cb) => cb(null, `${randomUUID()}.mp4`),
   }),
   limits: {
@@ -54,8 +66,14 @@ const videoUpload = multer({
     parts: 4,
   },
   fileFilter(_req, file, cb) {
-    if (!/\.mp4$/i.test(file.originalname || "")) {
+    // Full name rules run here so a bad name doesn't cost a whole upload.
+    const name = String(file.originalname || "").trim();
+    if (!/\.mp4$/i.test(name)) {
       cb(new HttpError(415, "Only .mp4 files are allowed.", "INVALID_VIDEO"));
+      return;
+    }
+    if (name.length < 5 || name.length > 180 || /[\x00-\x1f/\\]/.test(name)) {
+      cb(new HttpError(400, "The file name is not valid.", "INVALID_VIDEO"));
       return;
     }
     cb(null, true);

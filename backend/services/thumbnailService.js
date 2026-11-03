@@ -69,7 +69,11 @@ export async function videoThumbnail(videoPath, duration, signal) {
     for (const seconds of new Set([secondsIn, 0])) {
       await extractFrame(videoPath, framePath, seconds, signal);
       const frame = await readFile(framePath).catch(() => null);
-      if (frame?.length) return await encode(sharp(frame));
+      // Extracted frames keep the source dimensions, so cap pixels like uploads.
+      if (frame?.length)
+        return await encode(
+          sharp(frame, { limitInputPixels: MAX_IMAGE_PIXELS }),
+        );
     }
     throw new HttpError(
       422,

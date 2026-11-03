@@ -2,7 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID, scryptSync } from "node:crypto";
-import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -21,7 +27,6 @@ Object.assign(process.env, {
   AWS_ACCESS_KEY_ID: "test-key",
   AWS_SECRET_ACCESS_KEY: "test-secret",
   FRONTEND_URL: "http://localhost:5173",
-  APP_BASE_URL: "http://localhost:9090",
   SESSION_SECRET: "s".repeat(40),
   AUTH_EMAIL: "admin@example.com",
   AUTH_PASSWORD_HASH: `${salt}:${scryptSync("correct-test-password", salt, 64).toString("hex")}`,
@@ -35,7 +40,8 @@ const { s3 } = await import("../config/aws.js");
 const { default: Video } = await import("../models/Video.js");
 const { default: StorageCleanup } = await import("../models/StorageCleanup.js");
 const ingests = await import("../services/ingestRegistry.js");
-const { uploadDir } = await import("../routes/videoRoutes.js");
+const { ensureUploadDir, uploadDir } = await import("../routes/videoRoutes.js");
+ensureUploadDir();
 
 const origin = "http://localhost:5173";
 const owner = "admin@example.com";
@@ -186,6 +192,12 @@ const cancel = (id, headers = { Authorization: auth, Origin: origin }) => {
   for (const [name, value] of Object.entries(headers)) req.set(name, value);
   return req;
 };
+
+test("existing upload directories are made private", () => {
+  chmodSync(uploadDir, 0o755);
+  ensureUploadDir();
+  assert.equal(statSync(uploadDir).mode & 0o777, 0o700);
+});
 
 test("the registry rolls back cancels that race with completion", () => {
   const id = randomUUID();

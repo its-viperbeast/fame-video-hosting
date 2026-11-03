@@ -58,10 +58,13 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
     const key = (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key === "k") {
         if (document.querySelector('[aria-modal="true"]')) return;
+        const input = document.querySelector(
+          ".library-search input, .overview-search input",
+        );
+        // Pages without a search box keep the browser's native shortcut.
+        if (!input) return;
         event.preventDefault();
-        document
-          .querySelector(".library-search input, .overview-search input")
-          ?.focus();
+        input.focus();
       }
     };
     document.addEventListener("keydown", key);
@@ -120,6 +123,15 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
     }
   }
 
+  function globalSort(value) {
+    setSort(value);
+    if (new URLSearchParams(location.search).has("page")) {
+      const query = new URLSearchParams(location.search);
+      query.delete("page");
+      navigate(`${location.pathname}?${query.toString()}`, { replace: true });
+    }
+  }
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -164,7 +176,7 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
                 <Dashboard
                   search={search}
                   sort={sort}
-                  onSort={setSort}
+                  onSort={globalSort}
                   onSearch={globalSearch}
                   data={data}
                   stats={stats}
