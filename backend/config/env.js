@@ -5,7 +5,7 @@ const schema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
-  PORT: z.coerce.number().int().min(1).max(65535).default(5000),
+  PORT: z.coerce.number().int().min(1).max(65535).default(9090),
   MONGODB_URI: z.string().min(1),
   AWS_REGION: z.string().min(1),
   S3_ENDPOINT: z.url(),

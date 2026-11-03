@@ -76,7 +76,7 @@ bun run dev
 bun run start
 ```
 
-The API listens on http://localhost:5000 and starts only after a successful MongoDB connection. Missing or invalid required configuration fails startup instead of silently opening an insecure service.
+The API listens on http://localhost:9090 and starts only after a successful MongoDB connection. Missing or invalid required configuration fails startup instead of silently opening an insecure service.
 
 ### 5. Configure and start the frontend
 
@@ -92,7 +92,7 @@ bun run dev
 The example sets:
 
 ```dotenv
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://localhost:9090/api
 VITE_DEMO_MODE=false
 VITE_MAX_UPLOAD_BYTES=2147483648
 ```
@@ -216,7 +216,7 @@ Success payloads below are inside `data`. Typical errors are 400 validation, 401
 All mutations, including CLI requests, must include the configured frontend Origin because sessions are cookie-based:
 
 ```sh
-curl -c /tmp/frame-cookies.txt -X POST http://localhost:5000/api/auth/login \
+curl -c /tmp/frame-cookies.txt -X POST http://localhost:9090/api/auth/login \
   -H 'Origin: http://localhost:5173' \
   -H 'Content-Type: application/json' \
   --data '{"email":"admin@example.com","password":"your-admin-password"}'
@@ -257,9 +257,9 @@ Response:
 ### List, playback and download
 
 ```sh
-curl -b /tmp/frame-cookies.txt 'http://localhost:5000/api/videos?search=Alpine&sort=newest&page=1&limit=6&filter=all'
-curl -b /tmp/frame-cookies.txt http://localhost:5000/api/videos/VIDEO_ID/play
-curl -b /tmp/frame-cookies.txt http://localhost:5000/api/videos/VIDEO_ID/download
+curl -b /tmp/frame-cookies.txt 'http://localhost:9090/api/videos?search=Alpine&sort=newest&page=1&limit=6&filter=all'
+curl -b /tmp/frame-cookies.txt http://localhost:9090/api/videos/VIDEO_ID/play
+curl -b /tmp/frame-cookies.txt http://localhost:9090/api/videos/VIDEO_ID/download
 ```
 
 List `data` contains `videos`, `pagination: {page, limit, total, pages}`, `stats: {total, size, favorites, recent}`, `maxUploadBytes`, and `maxThumbnailBytes`. Supported sorts: `newest`, `oldest`, `name`, `size`. Supported filters: `all`, `recent` (24 hours), and `favorites`. Maximum page size is 48. Search treats regex characters literally.
@@ -288,7 +288,7 @@ Download URLs use `Content-Disposition: attachment` with an encoded filename. Th
 Use the video card menu to choose **Rename video** or **Add note** / **Edit note**. Notes appear on the video card; clear a note and save to remove it. Names and notes are saved only in MongoDB. Renaming does not move, copy, or rewrite the stored video or thumbnail.
 
 ```sh
-curl -b /tmp/frame-cookies.txt -X PATCH http://localhost:5000/api/videos/VIDEO_ID \
+curl -b /tmp/frame-cookies.txt -X PATCH http://localhost:9090/api/videos/VIDEO_ID \
   -H 'Origin: http://localhost:5173' -H 'Content-Type: application/json' \
   -d '{"name":"Wedding highlights","note":"Review the ending."}'
 ```
@@ -298,7 +298,7 @@ The PATCH endpoint accepts any nonempty combination of `name` (1–180 character
 ### Delete
 
 ```sh
-curl -b /tmp/frame-cookies.txt -X DELETE http://localhost:5000/api/videos/VIDEO_ID \
+curl -b /tmp/frame-cookies.txt -X DELETE http://localhost:9090/api/videos/VIDEO_ID \
   -H 'Origin: http://localhost:5173'
 ```
 
