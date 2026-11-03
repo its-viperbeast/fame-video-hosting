@@ -73,15 +73,13 @@ test("login returns a bearer token, rejects bad credentials, and supports logout
   assert.equal(login.headers["set-cookie"], undefined);
   const header = `Bearer ${login.body.data.token}`;
   assert.equal(
-    (await request(app).get("/api/auth/me").set("Authorization", header)).status,
+    (await request(app).get("/api/auth/me").set("Authorization", header))
+      .status,
     200,
   );
   assert.equal(
-    (
-      await request(app)
-        .post("/api/auth/logout")
-        .set("Authorization", header)
-    ).status,
+    (await request(app).post("/api/auth/logout").set("Authorization", header))
+      .status,
     200,
   );
 });
@@ -101,9 +99,8 @@ test("changing the password verifies the old password and revokes old sessions",
     assert.equal(changed.status, 200);
     // The rotated session version invalidates the previous token.
     assert.equal(
-      (
-        await request(app).get("/api/auth/me").set("Authorization", oldHeader)
-      ).status,
+      (await request(app).get("/api/auth/me").set("Authorization", oldHeader))
+        .status,
       401,
     );
     assert.equal(
@@ -136,7 +133,8 @@ test("wrong role, owner, audience, and expired sessions are rejected", async () 
   ];
   for (const value of headers)
     assert.equal(
-      (await request(app).get("/api/auth/me").set("Authorization", value)).status,
+      (await request(app).get("/api/auth/me").set("Authorization", value))
+        .status,
       401,
     );
 });
@@ -230,11 +228,12 @@ test("renaming and notes update only the owner's ready video metadata without st
     Object.assign(state, update.$set);
     return { select: async () => new Video(state) };
   });
-  const patch = (body) => request(app)
-    .patch(`/api/videos/${id}`)
-    .set("Authorization", auth())
-    .set("Origin", origin)
-    .send(body);
+  const patch = (body) =>
+    request(app)
+      .patch(`/api/videos/${id}`)
+      .set("Authorization", auth())
+      .set("Origin", origin)
+      .send(body);
   for (const body of [
     { name: "  Wedding highlights  " },
     { note: "  First cut\nReview the ending.  " },
@@ -244,26 +243,43 @@ test("renaming and notes update only the owner's ready video metadata without st
     const result = await patch(body);
     assert.equal(result.status, 200);
     for (const [field, value] of Object.entries(body))
-      assert.equal(result.body.data.video[field], typeof value === "string" ? value.trim() : value);
+      assert.equal(
+        result.body.data.video[field],
+        typeof value === "string" ? value.trim() : value,
+      );
     assert.equal(result.body.data.video.key, undefined);
     assert.equal(result.body.data.video.owner, undefined);
     assert.equal(result.body.data.video.__v, undefined);
     assert.match(result.body.data.video.thumbnailUrl, /X-Amz-Signature/);
   }
   assert.deepEqual(writes[0], { $set: { name: "Wedding highlights" } });
-  assert.deepEqual(writes[1], { $set: { note: "First cut\nReview the ending." } });
+  assert.deepEqual(writes[1], {
+    $set: { note: "First cut\nReview the ending." },
+  });
   assert.equal(state.key, "videos/original.mp4");
   assert.equal(state.thumbnailKey, "thumbnail/original.webp");
   assert.equal(state.size, 1024);
 });
 test("metadata edits reject invalid fields and values before querying MongoDB", async (t) => {
-  t.mock.method(Video, "findOneAndUpdate", () => assert.fail("Invalid metadata reached MongoDB"));
+  t.mock.method(Video, "findOneAndUpdate", () =>
+    assert.fail("Invalid metadata reached MongoDB"),
+  );
   for (const body of [
-    {}, { name: "   " }, { name: "a".repeat(181) }, { name: "../clip.mp4" },
-    { name: "line\nbreak" }, { name: null }, { note: null }, { note: 123 },
-    { note: "a".repeat(5001) }, { favorite: "true" },
-    { key: "videos/other.mp4" }, { thumbnailKey: "thumbnail/other.webp" },
-    { owner: "other@example.com" }, { __v: 3 }, { name: "Title", size: 1 },
+    {},
+    { name: "   " },
+    { name: "a".repeat(181) },
+    { name: "../clip.mp4" },
+    { name: "line\nbreak" },
+    { name: null },
+    { note: null },
+    { note: 123 },
+    { note: "a".repeat(5001) },
+    { favorite: "true" },
+    { key: "videos/other.mp4" },
+    { thumbnailKey: "thumbnail/other.webp" },
+    { owner: "other@example.com" },
+    { __v: 3 },
+    { name: "Title", size: 1 },
   ]) {
     const result = await request(app)
       .patch("/api/videos/012345678901234567890123")
@@ -299,7 +315,9 @@ test("metadata edits cannot change unowned, deleted, or deleting videos", async 
 test("all MongoDB models save without version keys and enforce note limits", async (t) => {
   const documents = [
     new Video({
-      owner: "admin@example.com", name: "Clip.mp4", key: "videos/clip.mp4",
+      owner: "admin@example.com",
+      name: "Clip.mp4",
+      key: "videos/clip.mp4",
       size: 1024,
     }),
     new Admin({
@@ -307,14 +325,22 @@ test("all MongoDB models save without version keys and enforce note limits", asy
       name: "admin",
       passwordHash: process.env.AUTH_PASSWORD_HASH,
     }),
-    new StorageCleanup({ owner: "admin@example.com", key: "videos/cleanup.mp4", deleteAfter: new Date() }),
+    new StorageCleanup({
+      owner: "admin@example.com",
+      key: "videos/cleanup.mp4",
+      deleteAfter: new Date(),
+    }),
   ];
   for (const document of documents) {
     let inserted;
-    t.mock.method(document.constructor.collection, "insertOne", async (fields) => {
-      inserted = fields;
-      return { acknowledged: true, insertedId: fields._id };
-    });
+    t.mock.method(
+      document.constructor.collection,
+      "insertOne",
+      async (fields) => {
+        inserted = fields;
+        return { acknowledged: true, insertedId: fields._id };
+      },
+    );
     await document.save();
     assert.ok(inserted);
     assert.equal(Object.hasOwn(inserted, "__v"), false);

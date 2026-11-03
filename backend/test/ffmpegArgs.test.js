@@ -29,5 +29,7 @@ test("faststart args keep the requested flags and use seekable files", () => {
 });
 
 test("args must name both the input and output pipes", () => {
-  assert.throws(() => resolveFfmpegArgs("-c copy", "/tmp/in.mp4", "/tmp/out.mp4"));
+  assert.throws(() =>
+    resolveFfmpegArgs("-c copy", "/tmp/in.mp4", "/tmp/out.mp4"),
+  );
 });

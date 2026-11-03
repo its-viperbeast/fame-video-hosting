@@ -15,11 +15,15 @@ try {
       { __v: { $exists: true } },
       { $unset: { __v: "" } },
     );
-    console.info(`${Model.collection.name}: removed __v from ${result.modifiedCount} records`);
+    console.info(
+      `${Model.collection.name}: removed __v from ${result.modifiedCount} records`,
+    );
   }
 } catch (error) {
   // Connection errors can contain credentials or host details.
-  console.error(`Version-key removal failed (${error.name}). Check MongoDB access and retry.`);
+  console.error(
+    `Version-key removal failed (${error.name}). Check MongoDB access and retry.`,
+  );
   process.exitCode = 1;
 } finally {
   await mongoose.disconnect();
