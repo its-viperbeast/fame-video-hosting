@@ -38,11 +38,10 @@ app.use(
     },
   }),
 );
-app.get("/api/health", (_req, res) =>
-  ok(res.status(mongoose.connection.readyState === 1 ? 200 : 503), {
-    status: mongoose.connection.readyState === 1 ? "healthy" : "unavailable",
-  }),
-);
+app.get("/api/health", (_req, res) => {
+  const healthy = mongoose.connection.readyState === 1;
+  ok(res, { status: healthy ? "healthy" : "unavailable" }, healthy ? 200 : 503);
+});
 app.use("/api/auth", authRoutes);
 app.use("/api/videos", videoRoutes);
 app.use((_req, _res, next) => next(new HttpError(404, "Endpoint not found.", "NOT_FOUND")));

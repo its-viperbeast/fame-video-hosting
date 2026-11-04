@@ -16,6 +16,12 @@ import * as cleanup from "../services/cleanupService.js";
 import * as ingests from "../services/ingestRegistry.js";
 import * as storage from "../services/s3Service.js";
 
+const thumbnailWarning =
+  "The video was saved, but its thumbnail could not be created. Upload one from the video menu.";
+
+const cancelled = () => new HttpError(499, "Upload cancelled.", "UPLOAD_CANCELLED");
+const notFound = () => new HttpError(404, "Video not found.", "NOT_FOUND");
+
 async function ownedVideo(req) {
   objectId.parse(req.params.id);
   const video = await Video.findOne({
@@ -23,21 +29,16 @@ async function ownedVideo(req) {
     owner: req.user.id,
     status: "ready",
   }).select("+key +thumbnailKey");
-  if (!video) throw new HttpError(404, "Video not found.", "NOT_FOUND");
+  if (!video) throw notFound();
   return video;
 }
 
-// Object keys stay on the server; the client gets a short-lived signed URL.
+// Object keys stay on the server; the client only gets a thumbnail URL.
 async function present(video) {
   const json = video.toJSON();
   if (video.thumbnailKey) json.thumbnailUrl = await storage.thumbnailUrl(video.thumbnailKey);
   return json;
 }
-
-const thumbnailWarning =
-  "The video was saved, but its thumbnail could not be created. Upload one from the video menu.";
-
-const cancelled = () => new HttpError(499, "Upload cancelled.", "UPLOAD_CANCELLED");
 
 // Runs before Multer, so a cancel stops the transfer as well as processing.
 export function trackUpload(req, res, next) {
@@ -111,7 +112,7 @@ export async function ingest(req, res) {
     }
     if (signal.aborted) throw cancelled();
     const thumbKey = thumbnail && thumbnailKey();
-    tracked.push(key, ...(thumbKey ? [thumbKey] : []));
+    tracked.push(...[key, thumbKey].filter(Boolean));
     await cleanup.track(tracked, req.user.id);
     await storage.putFile(key, output, info.size, signal);
     let storedThumbKey;
@@ -150,7 +151,7 @@ export async function ingest(req, res) {
     ok(res, { video: await present(video), warning }, 201);
   } catch (err) {
     // Objects are deleted only if no saved video references them.
-    if (tracked.length) await cleanup.reconcile(tracked);
+    await cleanup.reconcile(tracked);
     throw signal.aborted ? cancelled() : err;
   } finally {
     await rm(source, { force: true }).catch(() => {});
@@ -164,10 +165,6 @@ export async function validateHeader(req, res) {
   ok(res, { valid: true });
 }
 
-function recentCutoff() {
-  return new Date(Date.now() - 24 * 3600000);
-}
-
 export async function list(req, res) {
   const q = z
     .object({
@@ -175,14 +172,13 @@ export async function list(req, res) {
       sort: z.enum(["newest", "oldest", "name", "size"]).default("newest"),
       page: z.coerce.number().int().min(1).max(100000).default(1),
       limit: z.coerce.number().int().min(1).max(48).default(6),
-      filter: z.enum(["all", "recent", "favorites"]).default("all"),
+      filter: z.enum(["all", "favorites"]).default("all"),
     })
     .parse(req.query);
   const base = { owner: req.user.id, status: "ready" },
     query = { ...base };
   if (q.search) query.name = { $regex: escapeRegex(q.search), $options: "i" };
   if (q.filter === "favorites") query.favorite = true;
-  if (q.filter === "recent") query.createdAt = { $gte: recentCutoff() };
   const sorts = {
     newest: { createdAt: -1, _id: -1 },
     oldest: { createdAt: 1, _id: 1 },
@@ -201,7 +197,7 @@ export async function list(req, res) {
       { $group: { _id: null, total: { $sum: 1 }, size: { $sum: "$size" } } },
     ]),
     Video.countDocuments({ ...base, favorite: true }),
-    Video.countDocuments({ ...base, createdAt: { $gte: recentCutoff() } }),
+    Video.countDocuments({ ...base, createdAt: { $gte: new Date(Date.now() - 24 * 3600000) } }),
   ]);
   ok(res, {
     videos: await Promise.all(videos.map(present)),
@@ -252,7 +248,7 @@ export async function update(req, res) {
     { $set: input },
     { new: true, runValidators: true },
   ).select("+thumbnailKey");
-  if (!video) throw new HttpError(404, "Video not found.", "NOT_FOUND");
+  if (!video) throw notFound();
   ok(res, { video: await present(video) });
 }
 
@@ -264,7 +260,7 @@ export async function replaceThumbnail(req, res) {
   const key = thumbnailKey();
   // Both keys are tracked up front. Whichever one ends up unreferenced is
   // deleted, now or by the worker if this process stops partway.
-  const tracked = [key, ...(previous ? [previous] : [])];
+  const tracked = [key, previous].filter(Boolean);
   await cleanup.track(tracked, req.user.id);
   let updated;
   try {
@@ -321,7 +317,7 @@ async function deleteOwnedVideo(owner, id) {
     { $set: { status: "deleting" } },
     { new: true },
   ).select("+key +thumbnailKey");
-  if (!video) throw new HttpError(404, "Video not found.", "NOT_FOUND");
+  if (!video) throw notFound();
   try {
     await cleanup.destroyVideo(video);
   } catch (error) {

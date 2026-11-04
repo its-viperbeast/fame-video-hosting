@@ -31,16 +31,14 @@ export default function VideoGallery({
       </div>
     );
   const pagination = data?.pagination;
-  const emptyTitle = search
-    ? "No videos found"
+  const [emptyTitle, emptyCopy] = search
+    ? ["No videos found", "Try a different search, or upload something new."]
     : filter === "favorites"
-      ? "No favorites yet"
-      : "A little quiet in here";
-  const emptyCopy = search
-    ? "Try a different search, or upload something new."
-    : filter === "favorites"
-      ? "Star a video and it will show up here whenever you need it."
-      : "Your next great story belongs here. Upload a video to get started.";
+      ? ["No favorites yet", "Star a video and it will show up here whenever you need it."]
+      : [
+          "A little quiet in here",
+          "Your next great story belongs here. Upload a video to get started.",
+        ];
   return (
     <>
       {selected.length > 0 && (

@@ -10,13 +10,6 @@ import {
 } from "../services/thumbnail";
 import Modal from "./Modal";
 
-async function imageSize(file) {
-  const bitmap = await createImageBitmap(file);
-  const size = { width: bitmap.width, height: bitmap.height };
-  bitmap.close();
-  return size;
-}
-
 export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
   const [file, setFile] = useState(null),
     [preview, setPreview] = useState(""),
@@ -39,7 +32,9 @@ export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
     let message = thumbnailFileError(selected, maxSize);
     if (!message) {
       try {
-        message = thumbnailSizeError(await imageSize(selected));
+        const bitmap = await createImageBitmap(selected);
+        message = thumbnailSizeError(bitmap);
+        bitmap.close();
       } catch {
         message = "This image could not be read. Try a different file.";
       }

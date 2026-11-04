@@ -11,17 +11,6 @@ import mongoose from "mongoose";
 async function main() {
   await connectDB();
   await ensureAdmin();
-  const uploads = await mongoose.connection.db.listCollections({ name: "uploads" }).toArray();
-  if (uploads.length) {
-    await mongoose.connection.dropCollection("uploads");
-    console.info("Removed unused uploads collection");
-  }
-  await mongoose.connection
-    .collection("videos")
-    .dropIndex("uploadSession_1")
-    .catch((error) => {
-      if (![26, 27].includes(error.code)) throw error;
-    });
   // Retries interrupted deletions and removes objects from abandoned or failed uploads.
   ensureUploadDir();
   const stopCleanup = startCleanupWorker({ tempDir: uploadDir });

@@ -1,5 +1,4 @@
-// The session token lives in localStorage so it survives reloads. The key does
-// not use the legacy "frame-" prefix that clearLegacyLocalData sweeps.
+// The session token lives in localStorage so it survives reloads.
 const KEY = "frame.auth.token";
 let memory = "";
 let memoryOnly = false;

@@ -20,34 +20,29 @@ function run(args, signal, timeoutMs, failure) {
   return new Promise((resolve, reject) => {
     const child = spawn(env.FFMPEG_PATH, args, { stdio: ["ignore", "ignore", "pipe"] });
     let stderr = "";
-    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
-    const stop = () => child.kill("SIGKILL");
-    signal?.addEventListener("abort", stop, { once: true });
+    const kill = () => child.kill("SIGKILL");
+    const timer = setTimeout(kill, timeoutMs);
+    signal?.addEventListener("abort", kill, { once: true });
     const finish = () => {
       clearTimeout(timer);
-      signal?.removeEventListener("abort", stop);
+      signal?.removeEventListener("abort", kill);
     };
     child.stderr.on("data", (chunk) => {
       stderr = (stderr + chunk.toString()).slice(-2000);
     });
     child.on("error", (error) => {
       finish();
-      if (error.code === "ENOENT") {
-        reject(new HttpError(422, "ffmpeg is not available on the server.", "FFMPEG_UNAVAILABLE"));
-        return;
-      }
-      reject(error);
+      reject(
+        error.code === "ENOENT"
+          ? new HttpError(422, "ffmpeg is not available on the server.", "FFMPEG_UNAVAILABLE")
+          : error,
+      );
     });
     child.on("close", (code) => {
       finish();
-      if (signal?.aborted) {
-        reject(new HttpError(499, "Upload cancelled.", "UPLOAD_CANCELLED"));
-        return;
-      }
-      if (code === 0) {
-        resolve();
-        return;
-      }
+      if (signal?.aborted)
+        return reject(new HttpError(499, "Upload cancelled.", "UPLOAD_CANCELLED"));
+      if (code === 0) return resolve();
       console.error({ ffmpeg: stderr });
       reject(failure());
     });

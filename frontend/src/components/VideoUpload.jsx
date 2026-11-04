@@ -227,28 +227,7 @@ export default function VideoUpload({
   );
   if (!open) return leaveDialog || null;
   const pending = items.filter((i) => ["ready", "failed", "cancelled"].includes(i.status));
-  const footer = (
-    <>
-      <span className="upload-privacy">
-        <ShieldCheck size={15} />
-        Your videos are private by default
-      </span>
-      <button
-        className="btn primary"
-        disabled={inspecting || !pending.length}
-        onClick={() => upload(pending)}
-      >
-        {busy && !pending.length ? (
-          <LoaderCircle size={17} className="spin" />
-        ) : (
-          <CloudUpload size={17} />
-        )}{" "}
-        {busy && !pending.length
-          ? "Uploading…"
-          : `${busy ? "Add" : "Upload"}${pending.length ? ` ${pending.length} video${pending.length > 1 ? "s" : ""}` : " videos"}${busy ? " to queue" : ""}`}
-      </button>
-    </>
-  );
+  const waiting = busy && !pending.length;
   return (
     <>
       <div className="upload-page-layout">
@@ -268,9 +247,7 @@ export default function VideoUpload({
                 addFiles(e.dataTransfer.files);
               }}
               onClick={(event) => {
-                if (event.target === input.current) return;
-                if (inspecting) return;
-                input.current?.click();
+                if (event.target !== input.current && !inspecting) input.current?.click();
               }}
             >
               <div className="upload-cloud">
@@ -390,7 +367,22 @@ export default function VideoUpload({
               <p>Bring your best quality. We’ll keep every detail, just as you intended.</p>
             </div>
           </div>
-          <footer className="upload-panel-footer">{footer}</footer>
+          <footer className="upload-panel-footer">
+            <span className="upload-privacy">
+              <ShieldCheck size={15} />
+              Your videos are private by default
+            </span>
+            <button
+              className="btn primary"
+              disabled={inspecting || !pending.length}
+              onClick={() => upload(pending)}
+            >
+              {waiting ? <LoaderCircle size={17} className="spin" /> : <CloudUpload size={17} />}{" "}
+              {waiting
+                ? "Uploading…"
+                : `${busy ? "Add" : "Upload"} ${pending.length ? plural(pending.length, "video") : "videos"}${busy ? " to queue" : ""}`}
+            </button>
+          </footer>
         </section>
       </div>
       {preview && (

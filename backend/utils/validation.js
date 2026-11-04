@@ -19,27 +19,28 @@ export const fileSchema = (max) =>
 
 export const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid resource ID");
 
+const mp4Brands = new Set([
+  "isom",
+  "iso2",
+  "iso3",
+  "iso4",
+  "iso5",
+  "iso6",
+  "mp41",
+  "mp42",
+  "avc1",
+  "dash",
+  "M4V ",
+  "MSNV",
+]);
+
 export function validateMp4Header(bytes) {
   const data = Buffer.from(bytes);
-  const brands = new Set([
-    "isom",
-    "iso2",
-    "iso3",
-    "iso4",
-    "iso5",
-    "iso6",
-    "mp41",
-    "mp42",
-    "avc1",
-    "dash",
-    "M4V ",
-    "MSNV",
-  ]);
   if (data.length < 16 || data.toString("ascii", 4, 8) !== "ftyp") return false;
   const boxSize = data.readUInt32BE(0);
   if (boxSize < 16 || boxSize > data.length) return false;
   for (let offset = 8; offset + 4 <= boxSize; offset += 4) {
-    if (offset !== 12 && brands.has(data.toString("ascii", offset, offset + 4))) return true;
+    if (offset !== 12 && mp4Brands.has(data.toString("ascii", offset, offset + 4))) return true;
   }
   return false;
 }

@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertCircle, LoaderCircle, RefreshCw, ShieldCheck } from "lucide-react";
 import { api, formatBytes, formatDate } from "../services/api";
 import Modal from "./Modal";
 
-export function Player({ video, getSource }) {
+export default function VideoPlayer({ video, onClose }) {
   const [source, setSource] = useState(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true);
@@ -16,7 +16,7 @@ export function Player({ video, getSource }) {
       restore.current = { time: player.current.currentTime, playing: !player.current.paused };
     setError("");
     try {
-      const data = await getSource();
+      const data = await api.play(video.id);
       setSource(data);
       setLoading(true);
     } catch (err) {
@@ -26,7 +26,8 @@ export function Player({ video, getSource }) {
   };
   useEffect(() => {
     let live = true;
-    getSource()
+    api
+      .play(video.id)
       .then((data) => {
         if (live) setSource(data);
       })
@@ -39,7 +40,7 @@ export function Player({ video, getSource }) {
     return () => {
       live = false;
     };
-  }, [getSource]);
+  }, [video.id]);
   useEffect(() => {
     if (!source?.expiresAt) return;
     const timeout = setTimeout(
@@ -49,88 +50,79 @@ export function Player({ video, getSource }) {
     return () => clearTimeout(timeout);
   }, [source]);
   return (
-    <div className="player-wrap">
-      <div className="player-screen">
-        {source && !error && (
-          <video
-            ref={player}
-            src={source.url}
-            poster={video.thumbnailUrl}
-            controls
-            playsInline
-            preload="metadata"
-            // Play/pause state after a refresh is restored in onLoadedMetadata,
-            // which always runs before autoplay can start.
-            autoPlay
-            onLoadedMetadata={() => {
-              if (restore.current) {
-                player.current.currentTime = restore.current.time;
-                if (restore.current.playing) player.current.play().catch(() => {});
-                else player.current.pause();
-                restore.current = null;
-              }
-            }}
-            onCanPlay={() => {
-              setLoading(false);
-            }}
-            onWaiting={() => setLoading(true)}
-            onPlaying={() => {
-              setLoading(false);
-              attempts.current = 0;
-            }}
-            onError={() => {
-              if (attempts.current++ < 1) refresh.current();
-              else {
-                setError("This video could not be played. Try refreshing the player.");
-                setLoading(false);
-              }
-            }}
-          />
-        )}
-        {loading && !error && (
-          <div className="player-loading">
-            <LoaderCircle className="spin" size={30} />
-            <span>Getting your video ready…</span>
-          </div>
-        )}
-        {error && (
-          <div className="player-error">
-            <AlertCircle size={30} />
-            <p>{error}</p>
-            <button
-              className="btn secondary"
-              onClick={() => {
-                attempts.current = 0;
-                refresh.current();
-              }}
-            >
-              <RefreshCw size={16} />
-              Try again
-            </button>
-          </div>
-        )}
-      </div>
-      <div className="player-details">
-        <div>
-          <h3>{video.name}</h3>
-          <p>
-            {formatBytes(video.size)} <span>·</span> {formatDate(video.createdAt)}
-          </p>
-        </div>
-        <span className="private-badge">
-          <ShieldCheck size={14} />
-          Secure playback
-        </span>
-      </div>
-    </div>
-  );
-}
-
-export default function VideoPlayer({ video, onClose }) {
-  const getSource = useCallback(() => api.play(video.id), [video.id]);
-  return (
     <Modal title="Video preview" className="player-modal" onClose={onClose}>
-      <Player video={video} getSource={getSource} />
+      <div className="player-wrap">
+        <div className="player-screen">
+          {source && !error && (
+            <video
+              ref={player}
+              src={source.url}
+              poster={video.thumbnailUrl}
+              controls
+              playsInline
+              preload="metadata"
+              // Play/pause state after a refresh is restored in onLoadedMetadata,
+              // which always runs before autoplay can start.
+              autoPlay
+              onLoadedMetadata={() => {
+                if (restore.current) {
+                  player.current.currentTime = restore.current.time;
+                  if (restore.current.playing) player.current.play().catch(() => {});
+                  else player.current.pause();
+                  restore.current = null;
+                }
+              }}
+              onCanPlay={() => setLoading(false)}
+              onWaiting={() => setLoading(true)}
+              onPlaying={() => {
+                setLoading(false);
+                attempts.current = 0;
+              }}
+              onError={() => {
+                if (attempts.current++ < 1) refresh.current();
+                else {
+                  setError("This video could not be played. Try refreshing the player.");
+                  setLoading(false);
+                }
+              }}
+            />
+          )}
+          {loading && !error && (
+            <div className="player-loading">
+              <LoaderCircle className="spin" size={30} />
+              <span>Getting your video ready…</span>
+            </div>
+          )}
+          {error && (
+            <div className="player-error">
+              <AlertCircle size={30} />
+              <p>{error}</p>
+              <button
+                className="btn secondary"
+                onClick={() => {
+                  attempts.current = 0;
+                  refresh.current();
+                }}
+              >
+                <RefreshCw size={16} />
+                Try again
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="player-details">
+          <div>
+            <h3>{video.name}</h3>
+            <p>
+              {formatBytes(video.size)} <span>·</span> {formatDate(video.createdAt)}
+            </p>
+          </div>
+          <span className="private-badge">
+            <ShieldCheck size={14} />
+            Secure playback
+          </span>
+        </div>
+      </div>
     </Modal>
   );
 }

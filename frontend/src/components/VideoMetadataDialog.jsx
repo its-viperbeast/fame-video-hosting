@@ -10,15 +10,17 @@ export default function VideoMetadataDialog({ video, field, onClose, onSaved }) 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const maxLength = renaming ? 180 : 5000;
-  const changed = value.trim() !== (video[field] || "");
+  const trimmed = value.trim();
+  // A note can be cleared, but a video always needs a name.
+  const canSave = trimmed !== (video[field] || "") && !(renaming && !trimmed);
 
   async function save(event) {
     event.preventDefault();
-    if (saving || !changed || (renaming && !value.trim())) return;
+    if (saving || !canSave) return;
     setSaving(true);
     setError("");
     try {
-      const { video: updated } = await api.update(video.id, { [field]: value.trim() });
+      const { video: updated } = await api.update(video.id, { [field]: trimmed });
       toast.success(renaming ? "Video renamed" : "Note saved");
       onSaved(updated);
     } catch (err) {
@@ -42,7 +44,7 @@ export default function VideoMetadataDialog({ video, field, onClose, onSaved }) 
             className="btn primary"
             type="submit"
             form="video-metadata-form"
-            disabled={saving || !changed || (renaming && !value.trim())}
+            disabled={saving || !canSave}
           >
             {saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
             {saving ? "Saving…" : renaming ? "Save name" : "Save note"}

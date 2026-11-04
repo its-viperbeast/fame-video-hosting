@@ -47,21 +47,10 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
   useDialogFocus(sidebar, mobile && open, onClose);
 
   const links = [
-    { to: "/", icon: LayoutGrid, label: "Overview", active: pathname === "/" },
-    {
-      to: "/videos",
-      icon: FolderOpen,
-      label: "All videos",
-      count: stats.total,
-      active: pathname === "/videos",
-    },
-    { to: "/upload", icon: CloudUpload, label: "Upload videos", active: pathname === "/upload" },
-    {
-      to: "/change-password",
-      icon: KeyRound,
-      label: "Change password",
-      active: pathname === "/change-password",
-    },
+    { to: "/", icon: LayoutGrid, label: "Overview" },
+    { to: "/videos", icon: FolderOpen, label: "All videos", count: stats.total },
+    { to: "/upload", icon: CloudUpload, label: "Upload videos" },
+    { to: "/change-password", icon: KeyRound, label: "Change password" },
   ];
 
   return (
@@ -87,13 +76,13 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
           </button>
         </div>
         <nav className="main-nav" aria-label="Main navigation">
-          {links.map(({ to, icon: Icon, label, count, active }) => (
+          {links.map(({ to, icon: Icon, label, count }) => (
             <Link
               to={to}
               key={label}
               onClick={onClose}
-              aria-current={active ? "page" : undefined}
-              className={`nav-link ${active ? "active" : ""}`}
+              aria-current={pathname === to ? "page" : undefined}
+              className={`nav-link ${pathname === to ? "active" : ""}`}
             >
               <Icon size={19} />
               <span>{label}</span>
@@ -132,19 +121,17 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
   );
 }
 
+const pageTitles = {
+  "/videos": "All videos",
+  "/upload": "Upload videos",
+  "/change-password": "Change password",
+};
+
 export function Header({ onMenu, menuOpen }) {
-  const { pathname, search: routeSearch } = useLocation();
+  const { pathname, search } = useLocation();
   const favorites =
-    pathname === "/videos" && new URLSearchParams(routeSearch).get("filter") === "favorites";
-  const title = favorites
-    ? "Favorites"
-    : pathname === "/upload"
-      ? "Upload videos"
-      : pathname === "/videos"
-        ? "All videos"
-        : pathname === "/change-password"
-          ? "Change password"
-          : "Overview";
+    pathname === "/videos" && new URLSearchParams(search).get("filter") === "favorites";
+  const title = favorites ? "Favorites" : pageTitles[pathname] || "Overview";
   return (
     <header className="topbar">
       <div className="topbar-breadcrumb">

@@ -110,6 +110,24 @@ export default function VideoCard({
   const [menu, setMenu] = useState(false),
     [dropUp, setDropUp] = useState(false);
   const menuRef = useRef(null);
+  const menuItems = [
+    { icon: Play, label: "Preview video", action: onPlay },
+    { icon: Download, label: "Download", action: onDownload },
+    { icon: Link, label: "Copy link", action: onCopyLink },
+    {
+      icon: ImageUp,
+      label: video.thumbnailUrl ? "Change thumbnail" : "Add thumbnail",
+      action: onThumbnail,
+    },
+    { icon: Pencil, label: "Rename video", action: onRename },
+    { icon: NotebookPen, label: video.note ? "Edit note" : "Add note", action: onNote },
+    {
+      icon: Star,
+      label: video.favorite ? "Remove from favorites" : "Add to favorites",
+      action: onFavorite,
+    },
+    { icon: Trash2, label: "Delete video", action: onDelete, className: "danger-text" },
+  ];
 
   useEffect(() => {
     if (!menu) return;
@@ -178,7 +196,7 @@ export default function VideoCard({
             </button>
             <span>
               {formatBytes(video.size)}
-              <i>·</i> {video.category || "MP4 video"}
+              <i>·</i> MP4 video
             </span>
           </div>
           <div className="card-menu-anchor">
@@ -201,87 +219,20 @@ export default function VideoCard({
                   role="menu"
                   ref={menuRef}
                 >
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setMenu(false);
-                      onPlay(video);
-                    }}
-                  >
-                    <Play size={15} />
-                    Preview video
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setMenu(false);
-                      onDownload(video);
-                    }}
-                  >
-                    <Download size={15} />
-                    Download
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setMenu(false);
-                      onCopyLink(video);
-                    }}
-                  >
-                    <Link size={15} />
-                    Copy link
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setMenu(false);
-                      onThumbnail(video);
-                    }}
-                  >
-                    <ImageUp size={15} />
-                    {video.thumbnailUrl ? "Change thumbnail" : "Add thumbnail"}
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setMenu(false);
-                      onRename(video);
-                    }}
-                  >
-                    <Pencil size={15} />
-                    Rename video
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setMenu(false);
-                      onNote(video);
-                    }}
-                  >
-                    <NotebookPen size={15} />
-                    {video.note ? "Edit note" : "Add note"}
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setMenu(false);
-                      onFavorite(video);
-                    }}
-                  >
-                    <Star size={15} />
-                    {video.favorite ? "Remove from favorites" : "Add to favorites"}
-                  </button>
-                  <button
-                    role="menuitem"
-                    className="danger-text"
-                    onClick={() => {
-                      setMenu(false);
-                      onDelete(video);
-                    }}
-                  >
-                    <Trash2 size={15} />
-                    Delete video
-                  </button>
+                  {menuItems.map(({ icon: Icon, label, action, className }) => (
+                    <button
+                      key={label}
+                      role="menuitem"
+                      className={className}
+                      onClick={() => {
+                        setMenu(false);
+                        action(video);
+                      }}
+                    >
+                      <Icon size={15} />
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </>
             )}

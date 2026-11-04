@@ -39,7 +39,7 @@ try {
   assert.equal((await versions(key)).length, 0);
   keys.push(key, thumbnailKey);
   await cleanup.track(keys, env.AUTH_EMAIL);
-  const source = fileURLToPath(new URL("../../frontend/public/sample.mp4", import.meta.url));
+  const source = fileURLToPath(new URL("./sample.mp4", import.meta.url));
   const { size } = await stat(source);
   // Include an overwritten version and an old-style hide marker in the fixture.
   await storage.putFile(key, source, size);

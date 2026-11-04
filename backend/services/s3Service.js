@@ -122,28 +122,35 @@ export async function deleteObject(key) {
 const mediaUrl = (key) =>
   `${env.MEDIA_BASE_URL}/${key.split("/").map(encodeURIComponent).join("/")}`;
 
-export async function playbackUrl(video, download = false, ttl = env.PRESIGNED_URL_TTL_SECONDS) {
+export async function playbackUrl(video, download = false) {
   if (env.MEDIA_BASE_URL && !download) return { url: mediaUrl(video.key) };
-  const disposition = download
-    ? `attachment; filename="video.mp4"; filename*=UTF-8''${encodeURIComponent(video.name).replace(/['()*]/g, (ch) => "%" + ch.charCodeAt(0).toString(16))}`
-    : "inline";
+  // RFC 5987 filename*; encodeURIComponent leaves ' ( ) * unescaped.
+  const fileName = encodeURIComponent(video.name).replace(
+    /['()*]/g,
+    (ch) => "%" + ch.charCodeAt(0).toString(16),
+  );
   const url = await sign(
     new GetObjectCommand({
       ...base(video.key),
       ResponseContentType: "video/mp4",
-      ResponseContentDisposition: disposition,
+      ResponseContentDisposition: download
+        ? `attachment; filename="video.mp4"; filename*=UTF-8''${fileName}`
+        : "inline",
       ResponseCacheControl: "private, no-store",
     }),
-    { expiresIn: ttl },
   );
-  return { url, expiresAt: new Date(Date.now() + ttl * 1000).toISOString() };
+  return {
+    url,
+    expiresAt: new Date(Date.now() + env.PRESIGNED_URL_TTL_SECONDS * 1000).toISOString(),
+  };
 }
 
 // Signing from the start of a half-TTL window keeps the URL stable across list
 // requests, so the browser reuses its cached image. Each replacement has a new
 // key, which changes the URL, so a cached thumbnail is never stale.
-export async function thumbnailUrl(key, ttl = env.PRESIGNED_URL_TTL_SECONDS) {
+export async function thumbnailUrl(key) {
   if (env.MEDIA_BASE_URL) return mediaUrl(key);
+  const ttl = env.PRESIGNED_URL_TTL_SECONDS;
   const window = Math.floor(ttl / 2) * 1000;
   return sign(
     new GetObjectCommand({

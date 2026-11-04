@@ -7,7 +7,7 @@ import multer from "multer";
 import { env } from "../config/env.js";
 import { requireAuth } from "../middleware/auth.js";
 import { HttpError, wrap } from "../utils/http.js";
-import * as c from "../controllers/videoController.js";
+import * as videos from "../controllers/videoController.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -66,14 +66,14 @@ const videoUpload = multer({
     cb(null, true);
   },
 });
-router.post("/upload", c.trackUpload, videoUpload.single("file"), wrap(c.ingest));
-router.post("/upload/:uploadId/cancel", wrap(c.cancelUpload));
-router.post("/validate", headerUpload.single("header"), wrap(c.validateHeader));
-router.get("/", wrap(c.list));
-router.get("/:id", wrap(c.details));
-router.get("/:id/play", wrap(c.play));
-router.get("/:id/download", wrap(c.download));
-router.patch("/:id", wrap(c.update));
-router.put("/:id/thumbnail", thumbnailUpload.single("thumbnail"), wrap(c.replaceThumbnail));
-router.delete("/:id", wrap(c.remove));
+router.post("/upload", videos.trackUpload, videoUpload.single("file"), wrap(videos.ingest));
+router.post("/upload/:uploadId/cancel", wrap(videos.cancelUpload));
+router.post("/validate", headerUpload.single("header"), wrap(videos.validateHeader));
+router.get("/", wrap(videos.list));
+router.get("/:id", wrap(videos.details));
+router.get("/:id/play", wrap(videos.play));
+router.get("/:id/download", wrap(videos.download));
+router.patch("/:id", wrap(videos.update));
+router.put("/:id/thumbnail", thumbnailUpload.single("thumbnail"), wrap(videos.replaceThumbnail));
+router.delete("/:id", wrap(videos.remove));
 export default router;

@@ -75,8 +75,7 @@ export const api = {
   play: (id) => http.get(`/videos/${id}/play`),
   download: (id) => http.get(`/videos/${id}/download`),
   remove: (id) => http.delete(`/videos/${id}`),
-  favorite: (id, favorite) => http.patch(`/videos/${id}`, { favorite }),
-  update: (id, metadata) => http.patch(`/videos/${id}`, metadata),
+  update: (id, changes) => http.patch(`/videos/${id}`, changes),
   // Progress covers the transfer. At 100% the server is still preparing the
   // video and thumbnail; the request resolves with { video, warning } when both are stored.
   upload(file, metadata, progress, signal) {

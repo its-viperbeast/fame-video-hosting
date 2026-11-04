@@ -9,22 +9,28 @@ import { requireAuth, verifyPassword } from "../middleware/auth.js";
 import { publicAdmin } from "../services/adminService.js";
 import { ok, wrap, HttpError } from "../utils/http.js";
 
-const router = Router();
-router.post(
-  "/login",
+const attemptLimit = (message) =>
   rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 10,
     standardHeaders: "draft-8",
     legacyHeaders: false,
-    message: {
-      success: false,
-      error: {
-        code: "RATE_LIMITED",
-        message: "Too many sign-in attempts. Try again in 15 minutes.",
-      },
-    },
-  }),
+    message: { success: false, error: { code: "RATE_LIMITED", message } },
+  });
+
+const signToken = (admin) =>
+  jwt.sign({ role: admin.role, sessionVersion: admin.sessionVersion ?? 0 }, env.SESSION_SECRET, {
+    subject: admin.email,
+    expiresIn: "8h",
+    audience: "frame-api",
+    issuer: "frame",
+    algorithm: "HS256",
+  });
+
+const router = Router();
+router.post(
+  "/login",
+  attemptLimit("Too many sign-in attempts. Try again in 15 minutes."),
   wrap(async (req, res) => {
     const input = z
       .object({ email: z.email().max(254), password: z.string().min(1).max(256) })
@@ -32,36 +38,13 @@ router.post(
     const admin = await Admin.findOne({ email: input.email.toLowerCase() }).select("+passwordHash");
     if (!admin || !verifyPassword(input.password, admin.passwordHash))
       throw new HttpError(401, "Email or password is incorrect.", "INVALID_CREDENTIALS");
-    const token = jwt.sign(
-      { role: admin.role, sessionVersion: admin.sessionVersion ?? 0 },
-      env.SESSION_SECRET,
-      {
-        subject: admin.email,
-        expiresIn: "8h",
-        audience: "frame-api",
-        issuer: "frame",
-        algorithm: "HS256",
-      },
-    );
-    ok(res, { user: publicAdmin(admin), token });
+    ok(res, { user: publicAdmin(admin), token: signToken(admin) });
   }),
 );
 router.get("/me", requireAuth, (req, res) => ok(res, { user: publicAdmin(req.user) }));
 router.post(
   "/change-password",
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 10,
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-    message: {
-      success: false,
-      error: {
-        code: "RATE_LIMITED",
-        message: "Too many password attempts. Try again in 15 minutes.",
-      },
-    },
-  }),
+  attemptLimit("Too many password attempts. Try again in 15 minutes."),
   requireAuth,
   wrap(async (req, res) => {
     const input = z
@@ -79,18 +62,7 @@ router.post(
     admin.passwordHash = `${salt}:${scryptSync(input.newPassword, salt, 64).toString("hex")}`;
     admin.sessionVersion = (admin.sessionVersion ?? 0) + 1;
     await admin.save();
-    const token = jwt.sign(
-      { role: admin.role, sessionVersion: admin.sessionVersion },
-      env.SESSION_SECRET,
-      {
-        subject: admin.email,
-        expiresIn: "8h",
-        audience: "frame-api",
-        issuer: "frame",
-        algorithm: "HS256",
-      },
-    );
-    ok(res, { changed: true, token });
+    ok(res, { changed: true, token: signToken(admin) });
   }),
 );
 // Tokens are stateless and carried by the client, so signing out only drops the

@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { api, formatBytes } from "../services/api";
-import { deleteVideos as removeEach } from "../services/deleteVideos";
+import { deleteVideos } from "../services/deleteVideos";
 import VideoGallery from "../components/VideoGallery";
 import VideoCard from "../components/VideoCard";
 import VideoPlayer from "../components/VideoPlayer";
@@ -29,7 +29,7 @@ import ThumbnailDialog from "../components/ThumbnailDialog";
 import VideoMetadataDialog from "../components/VideoMetadataDialog";
 import Modal from "../components/Modal";
 
-export function MetricCards({ stats }) {
+function MetricCards({ stats }) {
   return (
     <div className="metric-grid">
       <div className="metric-card">
@@ -82,7 +82,7 @@ export function MetricCards({ stats }) {
   );
 }
 
-export function UploadBanner({ onUpload, maxSize, onDrop }) {
+function UploadBanner({ onUpload, maxSize, onDrop }) {
   const [dragging, setDragging] = useState(false);
   return (
     <section
@@ -95,8 +95,7 @@ export function UploadBanner({ onUpload, maxSize, onDrop }) {
       onDrop={(event) => {
         event.preventDefault();
         setDragging(false);
-        if (onDrop) onDrop(event.dataTransfer.files);
-        else onUpload();
+        onDrop(event.dataTransfer.files);
       }}
     >
       <div className="banner-art">
@@ -155,9 +154,9 @@ export default function Dashboard({
     [metadataFor, setMetadataFor] = useState(null),
     [busy, setBusy] = useState(false),
     [overviewQuery, setOverviewQuery] = useState(search);
-  const requestedFilter = new URLSearchParams(location.search).get("filter");
-  const filter = requestedFilter === "favorites" ? "favorites" : "all";
-  const page = Number(new URLSearchParams(location.search).get("page")) || 1;
+  const query = new URLSearchParams(location.search);
+  const filter = query.get("filter") === "favorites" ? "favorites" : "all";
+  const page = Number(query.get("page")) || 1;
   const isOverview = location.pathname !== "/videos";
 
   useEffect(() => {
@@ -165,25 +164,15 @@ export default function Dashboard({
   }, [search]);
 
   useEffect(() => {
-    if (location.pathname !== "/videos" || requestedFilter !== "recent") return;
-    const params = new URLSearchParams(location.search);
-    params.delete("filter");
-    const next = params.toString();
-    navigate(next ? `/videos?${next}` : "/videos", { replace: true });
-  }, [location.pathname, location.search, navigate, requestedFilter]);
-
-  useEffect(() => {
     setSelected([]);
   }, [search, sort, page, filter, location.pathname]);
 
-  function changeFilter(value) {
-    navigate(`${location.pathname}?filter=${value}`);
-  }
+  const refreshSilently = () => onRefresh(undefined, { silent: true });
 
   async function favorite(video) {
     try {
-      await api.favorite(video.id, !video.favorite);
-      onRefresh(undefined, { silent: true });
+      await api.update(video.id, { favorite: !video.favorite });
+      refreshSilently();
       toast.success(video.favorite ? "Removed from favorites" : "Added to favorites");
     } catch (err) {
       toast.error(err.message);
@@ -222,10 +211,10 @@ export default function Dashboard({
   }
 
   // Videos that fail stay in the dialog, so retrying only repeats unfinished deletions.
-  async function deleteVideos() {
+  async function deleteConfirmed() {
     setBusy(true);
     setDeleteError("");
-    const { deleted, failed, error } = await removeEach(deleting, api.remove);
+    const { deleted, failed, error } = await deleteVideos(deleting, api.remove);
     if (deleted) toast.success(`${deleted > 1 ? `${deleted} videos` : "Video"} deleted`);
     if (failed.length) {
       setDeleting(failed);
@@ -235,29 +224,38 @@ export default function Dashboard({
       setDeleting(null);
       setSelected([]);
     }
-    onRefresh(undefined, { silent: true });
+    refreshSilently();
     setBusy(false);
   }
 
   function thumbnailSaved() {
     setThumbnailFor(null);
-    onRefresh(undefined, { silent: true });
+    refreshSilently();
   }
 
   function metadataSaved(updated) {
     setMetadataFor(null);
     setPlayer((current) => (current?.id === updated.id ? { ...current, ...updated } : current));
-    onRefresh(undefined, { silent: true });
+    refreshSilently();
   }
 
-  const titles = {
-    favorites: ["The ones you love.", "Keep your favorite frames a little closer."],
-    all: [
-      "Your library at a glance.",
-      "A home for your videos. A little space for your creativity.",
-    ],
+  const cardActions = {
+    onPlay: setPlayer,
+    onDelete: (video) => confirmDelete([video]),
+    onDownload: download,
+    onCopyLink: copyLink,
+    onFavorite: favorite,
+    onThumbnail: setThumbnailFor,
+    onRename: (video) => setMetadataFor({ video, field: "name" }),
+    onNote: (video) => setMetadataFor({ video, field: "note" }),
   };
-  const title = titles[filter] || titles.all;
+  const [title, subtitle] =
+    filter === "favorites"
+      ? ["The ones you love.", "Keep your favorite frames a little closer."]
+      : [
+          "Your library at a glance.",
+          "A home for your videos. A little space for your creativity.",
+        ];
   const tabs = [
     { key: "all", text: "All videos", icon: Film, count: stats.total },
     { key: "favorites", text: "Favorites", icon: Star, count: stats.favorites },
@@ -281,8 +279,8 @@ export default function Dashboard({
                 <span />
                 YOUR CREATIVE SPACE
               </div>
-              <h1>{title[0]}</h1>
-              <p>{title[1]}</p>
+              <h1>{title}</h1>
+              <p>{subtitle}</p>
             </div>
             <div className="heading-actions">
               <span className="private-workspace">
@@ -363,16 +361,7 @@ export default function Dashboard({
                         video={video}
                         view="grid"
                         selectable={false}
-                        selected={false}
-                        onSelect={() => {}}
-                        onPlay={setPlayer}
-                        onDelete={(item) => confirmDelete([item])}
-                        onDownload={download}
-                        onCopyLink={copyLink}
-                        onFavorite={favorite}
-                        onThumbnail={setThumbnailFor}
-                        onRename={(item) => setMetadataFor({ video: item, field: "name" })}
-                        onNote={(item) => setMetadataFor({ video: item, field: "note" })}
+                        {...cardActions}
                       />
                     ))}
                   </div>
@@ -415,7 +404,7 @@ export default function Dashboard({
                 <button
                   className={`library-tab ${filter === key ? "active" : ""}`}
                   key={key}
-                  onClick={() => changeFilter(key)}
+                  onClick={() => navigate(`${location.pathname}?filter=${key}`)}
                   aria-pressed={filter === key}
                 >
                   <Icon size={15} />
@@ -504,14 +493,7 @@ export default function Dashboard({
             onUpload={onUpload}
             onRefresh={() => onRefresh()}
             onClearSearch={() => onSearch("")}
-            onPlay={setPlayer}
-            onDelete={(video) => confirmDelete([video])}
-            onDownload={download}
-            onCopyLink={copyLink}
-            onFavorite={favorite}
-            onThumbnail={setThumbnailFor}
-            onRename={(video) => setMetadataFor({ video, field: "name" })}
-            onNote={(video) => setMetadataFor({ video, field: "note" })}
+            {...cardActions}
           />
         </section>
       )}
@@ -555,7 +537,7 @@ export default function Dashboard({
               <button className="btn secondary" disabled={busy} onClick={() => setDeleting(null)}>
                 Keep {deleting.length > 1 ? "videos" : "video"}
               </button>
-              <button className="btn danger" disabled={busy} onClick={deleteVideos}>
+              <button className="btn danger" disabled={busy} onClick={deleteConfirmed}>
                 {busy ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
                 {deleteError ? "Try again" : "Delete permanently"}
               </button>

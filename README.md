@@ -14,7 +14,7 @@ bun run dev
 
 Open http://localhost:5173. The application requires the configured backend and opens the sign-in page. Follow the setup below, then sign in with your administrator email and password. The frontend never falls back to a demo account or local video storage.
 
-The overview shows workspace totals and the three newest videos. The library supports search, sorting, pagination, favorites, grid/list views, playback, downloads, and deletion. The dedicated `/upload` page supports the upload queue. The retired `/storage`, `/settings`, and `/shared` pages redirect to the library, `/favorites` redirects to the favorites filter, and `/uploads` redirects to `/upload`.
+The overview shows workspace totals and the three newest videos. The library supports search, sorting, pagination, favorites, grid/list views, playback, downloads, and deletion. The dedicated `/upload` page supports the upload queue.
 
 ## Run with Backblaze B2 and MongoDB
 
@@ -26,7 +26,7 @@ Install MongoDB Community and start `mongod`, or create a MongoDB Atlas database
 MONGODB_URI=mongodb://127.0.0.1:27017/video-manager
 ```
 
-For Atlas, use its `mongodb+srv://...` connection string in the backend environment only. Allow connections from the backend host, use TLS, and grant the database user read/write access only to the selected database. Mongoose creates the video and upload collections and their indexes, including the upload TTL cleanup index. Ensure the deployment user can create these indexes or provision them during deployment.
+For Atlas, use its `mongodb+srv://...` connection string in the backend environment only. Allow connections from the backend host, use TLS, and grant the database user read/write access only to the selected database. Mongoose creates the `admins`, `videos`, and `storagecleanups` collections and their indexes. Ensure the deployment user can create these indexes or provision them during deployment.
 
 ### 2. Create the Backblaze B2 bucket
 
@@ -93,11 +93,10 @@ The example sets:
 
 ```dotenv
 VITE_API_URL=http://localhost:9090/api
-VITE_DEMO_MODE=false
 VITE_MAX_UPLOAD_BYTES=2147483648
 ```
 
-Restart Vite after changing `.env`. The first API start stores `AUTH_EMAIL` and `AUTH_PASSWORD_HASH` in the `admins` collection. Sign in with that email and the password you entered. Live-mode failures are shown as errors; the app never silently switches to demo storage. The backend's `MAX_UPLOAD_BYTES` remains authoritative.
+Restart Vite after changing `.env`. The first API start stores `AUTH_EMAIL` and `AUTH_PASSWORD_HASH` in the `admins` collection. Sign in with that email and the password you entered. API failures are shown as errors. The backend's `MAX_UPLOAD_BYTES` remains authoritative.
 
 For a production frontend build:
 
@@ -131,7 +130,7 @@ shubh-stream/
 │   ├── src/
 │   │   ├── components/  # Navbar, upload queue, cards, gallery, player and dialogs
 │   │   ├── pages/       # Dashboard and Upload
-│   │   ├── services/   # Axios API, signed uploads and IndexedDB demo adapter
+│   │   ├── services/   # Axios API, auth token, upload queue and helpers
 │   │   ├── App.jsx
 │   │   ├── main.jsx
 │   │   └── index.css
@@ -142,7 +141,7 @@ shubh-stream/
 │   ├── config/         # Validated environment, AWS SDK and MongoDB
 │   ├── controllers/
 │   ├── middleware/     # Bearer-token auth and error handling
-│   ├── models/         # Video and Upload
+│   ├── models/         # Admin, Video and StorageCleanup
 │   ├── routes/
 │   ├── scripts/        # Interactive password hashing
 │   ├── services/       # S3 signing and object verification
@@ -264,7 +263,7 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:9090/api/videos/VIDEO_ID
 curl -H "Authorization: Bearer $TOKEN" http://localhost:9090/api/videos/VIDEO_ID/download
 ```
 
-List `data` contains `videos`, `pagination: {page, limit, total, pages}`, `stats: {total, size, favorites, recent}`, `maxUploadBytes`, and `maxThumbnailBytes`. Supported sorts: `newest`, `oldest`, `name`, `size`. Supported filters: `all`, `recent` (24 hours), and `favorites`. Maximum page size is 48. Search treats regex characters literally.
+List `data` contains `videos`, `pagination: {page, limit, total, pages}`, `stats: {total, size, favorites, recent}`, `maxUploadBytes`, and `maxThumbnailBytes`. Supported sorts: `newest`, `oldest`, `name`, `size`. Supported filters: `all` and `favorites`. `stats.recent` counts uploads from the last 24 hours. Maximum page size is 48. Search treats regex characters literally.
 
 Playback/download `data`:
 
@@ -340,13 +339,12 @@ For an opt-in check against the configured real services, run `cd backend` then 
 
 ## Operational notes
 
-- All three MongoDB models disable Mongoose's `__v` version field for new writes. To remove it from existing app records, run `cd backend` then `bun run db:remove-version-keys` using the configured `MONGODB_URI`. This idempotent migration only unsets `__v` in `videos`, `uploads`, and `storagecleanups`; other fields and stored objects are unchanged.
 - This is a single-admin workspace, not public registration. For multiple users or organizations, integrate an identity provider and membership authorization, retaining owner checks on every data path.
 - The API validates a bounded MP4 container signature, not an entire codec stream. Add isolated media decoding, transcoding, malware scanning and moderation jobs if your deployment accepts untrusted public media. No codec compatibility can be inferred from `.mp4` alone.
-- Storage writes and MongoDB commits cannot share a transaction. Every object key is recorded in the `storagecleanups` collection before it is written. A cleanup worker in each API process runs at startup and every five minutes. It deletes tracked objects that no ready video references once they are due (24 hours for in-flight uploads, five minutes for failed cleanups). It finishes deletions stuck in `deleting` for over ten minutes and removes upload temp files older than a day. A crash at any point therefore leaves at most a tracked object that is removed later. Workers in several processes claim entries atomically. The presigned flow keeps its conditional writes, completion leases, and idempotent upserts. B2 lifecycle rules should still abort incomplete multipart uploads.
+- Storage writes and MongoDB commits cannot share a transaction. Every object key is recorded in the `storagecleanups` collection before it is written. A cleanup worker in each API process runs at startup and every five minutes. It deletes tracked objects that no ready video references once they are due (24 hours for in-flight uploads, five minutes for failed cleanups). It finishes deletions stuck in `deleting` for over ten minutes and removes upload temp files older than a day. A crash at any point therefore leaves at most a tracked object that is removed later. Workers in several processes claim entries atomically. B2 lifecycle rules should still abort incomplete multipart uploads.
 - Configure an AWS budget and alerts. Signed content lengths and verification enforce per-file limits. Storage is not capped by the API.
 - Apply stricter upload-creation budgets if exposed to more administrators. Replace in-memory rate-limit storage with a shared store when running multiple API processes.
 - Signing out drops the stored token in the client; existing JWTs stay valid until they expire after eight hours. Rotate the session secret to invalidate all sessions. Use a revocable session store if immediate per-session revocation is required.
-- The app does not provide third-party billing or subscription upgrades. The Free/100 GB labels describe the starter's display configuration.
+- There is no billing or storage quota. The "Unlimited" labels in the interface mean the API does not cap total storage; your B2 account and budget alerts are the real limit.
 - Restrict API access logs so bearer tokens and presigned URLs are never logged. Treat playback URLs as bearer credentials; with `MEDIA_BASE_URL` they never expire.
-- Font files and demo poster images load from Google Fonts and Unsplash. Host approved assets yourself when your deployment requires no third-party asset requests. The bundled `frontend/public/sample.mp4` is the [MDN CC0 flower video](https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4). All sample cards use this same illustrative clip.
+- The DM Sans and Manrope fonts load from Google Fonts. Self-host them when your deployment must make no third-party requests. `backend/scripts/sample.mp4` is the [MDN CC0 flower video](https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4), used only by the live delete check.

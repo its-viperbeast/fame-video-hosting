@@ -1,9 +1,9 @@
 // Production process file. Run from this directory:
 //   pm2 start ecosystem.config.cjs
 //
-// One fork only. Startup drops leftover indexes, and the cleanup worker
-// sweeps temp files and storage. PM2 cluster mode is Node's cluster module,
-// which does not apply when the interpreter is Bun.
+// One fork only. The cleanup worker sweeps temp files and storage. PM2
+// cluster mode is Node's cluster module, which does not apply when the
+// interpreter is Bun.
 module.exports = {
   apps: [
     {

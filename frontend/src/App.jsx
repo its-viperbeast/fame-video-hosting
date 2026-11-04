@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
 import {
   createBrowserRouter,
   Navigate,
@@ -23,10 +22,9 @@ import ChangePassword from "./pages/ChangePassword";
 
 const initialStats = { total: 0, size: 0, recent: 0, favorites: 0 };
 
-function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
+function Workspace({ dark, onTheme, onSignedOut }) {
   const location = useLocation();
   const [data, setData] = useState(null),
-    [stats, setStats] = useState(initialStats),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [search, setSearch] = useState(""),
@@ -39,6 +37,7 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
     requestId = useRef(0),
     // Set by the uploader while uploads are unfinished, so signing out asks first.
     leaveGuard = useRef(null);
+  const stats = data?.stats ?? initialStats;
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(search), 220);
@@ -74,7 +73,6 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
         const result = await api.list(params.current);
         if (id !== requestId.current) return;
         setData(result);
-        setStats(result.stats);
       } catch (err) {
         if (id !== requestId.current) return;
         if (err.status === 401) {
@@ -102,23 +100,23 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
     navigate(`/videos?${query}`, { replace: true });
   }, [data, loading, location.pathname, location.search, navigate]);
 
+  // A new search or sort starts again from the first page.
+  function resetPage() {
+    const query = new URLSearchParams(location.search);
+    if (!query.has("page")) return;
+    query.delete("page");
+    navigate(`${location.pathname}?${query}`, { replace: true });
+  }
+
   function globalSearch(value) {
     setSearch(value);
     if (location.pathname !== "/videos") navigate("/videos");
-    else if (new URLSearchParams(location.search).has("page")) {
-      const query = new URLSearchParams(location.search);
-      query.delete("page");
-      navigate(`${location.pathname}?${query.toString()}`, { replace: true });
-    }
+    else resetPage();
   }
 
   function globalSort(value) {
     setSort(value);
-    if (new URLSearchParams(location.search).has("page")) {
-      const query = new URLSearchParams(location.search);
-      query.delete("page");
-      navigate(`${location.pathname}?${query.toString()}`, { replace: true });
-    }
+    resetPage();
   }
 
   return (
@@ -130,7 +128,7 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
         stats={stats}
         open={mobileNav}
         onClose={() => setMobileNav(false)}
-        onLogout={() => (leaveGuard.current ? leaveGuard.current(onLogout) : onLogout())}
+        onLogout={() => (leaveGuard.current ? leaveGuard.current(onSignedOut) : onSignedOut())}
         dark={dark}
         onTheme={onTheme}
       />
@@ -140,11 +138,6 @@ function Workspace({ dark, onTheme, onSignedOut, onLogout }) {
           <Routes>
             <Route path="/upload" element={<Upload />} />
             <Route path="/change-password" element={<ChangePassword />} />
-            <Route path="/storage" element={<Navigate to="/videos" replace />} />
-            <Route path="/settings" element={<Navigate to="/videos" replace />} />
-            <Route path="/favorites" element={<Navigate to="/videos?filter=favorites" replace />} />
-            <Route path="/shared" element={<Navigate to="/videos" replace />} />
-            <Route path="/uploads" element={<Navigate to="/upload" replace />} />
             <Route
               path="*"
               element={
@@ -249,12 +242,7 @@ function Root() {
             path="*"
             element={
               auth === "in" ? (
-                <Workspace
-                  dark={dark}
-                  onTheme={() => setDark(!dark)}
-                  onSignedOut={signedOut}
-                  onLogout={signedOut}
-                />
+                <Workspace dark={dark} onTheme={() => setDark(!dark)} onSignedOut={signedOut} />
               ) : (
                 <Navigate to="/login" replace />
               )
