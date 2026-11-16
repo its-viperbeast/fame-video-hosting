@@ -92,7 +92,6 @@ export function trackUpload(req, res, next) {
             error: {
               code: "UPLOAD_CANCELLED",
               message: "Upload cancelled.",
-              requestId: randomUUID(),
             },
           });
         }

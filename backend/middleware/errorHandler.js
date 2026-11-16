@@ -1,10 +1,8 @@
 import { ZodError } from "zod";
-import { randomUUID } from "node:crypto";
 import { env } from "../config/env.js";
 import { HttpError } from "../utils/http.js";
 
 export function errorHandler(err, req, res, _next) {
-  const requestId = randomUUID();
   let status = err.status || 500,
     message = err.message,
     code = err.code || "INTERNAL_ERROR";
@@ -45,7 +43,7 @@ export function errorHandler(err, req, res, _next) {
     code = "UPLOAD_CANCELLED";
   }
   if (status >= 500) {
-    console.error({ requestId, method: req.method, code: err.name, message: err.message });
+    console.error({ method: req.method, code: err.name, message: err.message });
     // Messages written for HttpErrors are safe to show; anything else is not.
     if (!(err instanceof HttpError)) message = "Something went wrong. Please try again.";
   }
@@ -54,5 +52,5 @@ export function errorHandler(err, req, res, _next) {
     res.end();
     return;
   }
-  res.status(status).json({ success: false, error: { code, message, requestId } });
+  res.status(status).json({ success: false, error: { code, message } });
 }

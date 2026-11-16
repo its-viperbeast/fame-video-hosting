@@ -185,13 +185,12 @@ All responses use one of:
   "success": false,
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Safe human-readable message",
-    "requestId": "request-uuid"
+    "message": "Safe human-readable message"
   }
 }
 ```
 
-Success payloads below are inside `data`. Typical errors are 400 validation, 401 authentication, 404 missing/expired or unowned resources, 409 concurrent upload state, 413 size limits, 415 invalid MP4, 422 object mismatch, 429 rate limiting, and safe 500 upstream/service failures. Rate limit responses use the same success/error envelope, without request IDs.
+Success payloads below are inside `data`. Typical errors are 400 validation, 401 authentication, 404 missing/expired or unowned resources, 409 concurrent upload state, 413 size limits, 415 invalid MP4, 422 object mismatch, 429 rate limiting, and safe 500 upstream/service failures. Rate limit responses use the same success/error envelope.
 
 | Method | Endpoint                              | Access / purpose                                                        |
 | ------ | ------------------------------------- | ----------------------------------------------------------------------- |
