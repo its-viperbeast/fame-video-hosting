@@ -12,6 +12,7 @@
     "start:prod": "pm2 start ecosystem.config.cjs",
     "test:delete-live": "bun scripts/check-delete-flow.js",
     "password": "bun scripts/hash-password.js",
+    "normalize-names": "bun scripts/normalize-video-names.js",
     "format": "bun ./node_modules/prettier/bin/prettier.cjs --write .",
     "format:check": "bun ./node_modules/prettier/bin/prettier.cjs --check ."
   },

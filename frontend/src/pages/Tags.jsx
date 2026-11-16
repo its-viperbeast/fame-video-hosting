@@ -98,10 +98,6 @@ export default function TagsPage() {
   return (
     <>
       <div className="mb-7 min-w-0">
-        <div className="flex items-center gap-1.5 text-xs font-semibold tracking-[1.7px] text-muted">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#6ea0e8]" />
-          ORGANIZE YOUR LIBRARY
-        </div>
         <h1 className="font-display my-2 flex items-center gap-3 text-3xl leading-tight font-bold tracking-tight text-heading">
           Tags{" "}
           <span className="grid min-w-7 place-items-center rounded-lg border border-line bg-surface px-2 py-1 font-sans text-[13px] font-semibold tracking-normal text-muted">

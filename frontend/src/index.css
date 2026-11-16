@@ -46,6 +46,7 @@
   --animate-fade-in: fade-in 0.18s ease-out both;
   --animate-modal-in: modal-in 0.23s ease-out both;
   --animate-progress-slide: progress-slide 1.3s ease-in-out infinite;
+  --animate-caret: caret-blink 1.05s step-end infinite;
 
   @keyframes shimmer {
     from {
@@ -71,6 +72,15 @@
     to {
       opacity: 1;
       transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes caret-blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
     }
   }
   @keyframes progress-slide {

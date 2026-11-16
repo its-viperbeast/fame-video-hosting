@@ -121,6 +121,7 @@ Serve `frontend/dist` from a static host with SPA fallback to `index.html`. Depl
 - Native HTML5 playback controls: play/pause, seeking, volume, and fullscreen, plus a responsive player modal, loading/error feedback, automatic URL renewal, and position restoration.
 - Download links, deletion confirmation and bulk deletion, skeletons, empty states, a simplified mobile sidebar, keyboard navigation, modal focus trapping, and persisted dark/light mode.
 - Single-administrator authentication with a signed JWT returned at login and sent on every request as an `Authorization: Bearer` header. Every video query is scoped to the authenticated owner. Login and API rate limits, Helmet headers, strict request validation, safe JSON errors, and startup configuration validation.
+- Optional admin screen lock. After 30 minutes without keyboard, pointer, or scroll activity, the workspace is covered until the signed-in admin enters the four-digit `ADMIN_LOCK_PIN`. The lock is stored in the browser, shared across tabs, and checked again when the page becomes visible. A new sign-in starts unlocked. The PIN stays on the server.
 
 ## Architecture and upload flow
 
@@ -197,6 +198,7 @@ Success payloads below are inside `data`. Typical errors are 400 validation, 401
 | POST   | `/api/auth/login`                     | Public, rate limited; returns a bearer token                            |
 | GET    | `/api/auth/me`                        | Current authenticated administrator                                     |
 | POST   | `/api/auth/logout`                    | Acknowledges sign-out; the client drops its token                       |
+| POST   | `/api/auth/lock/verify`               | Authenticated; checks a four-digit `{ "pin" }` against `ADMIN_LOCK_PIN` |
 | POST   | `/api/videos/upload`                  | Authenticated, multipart `file` + `duration`; store video and thumbnail |
 | POST   | `/api/videos/upload/:uploadId/cancel` | Authenticated; stop that upload, or remove it if it just finished       |
 | POST   | `/api/videos/validate`                | Authenticated, multipart `header` sample ≤4 KiB                         |
@@ -318,6 +320,7 @@ Response: `{"success":true,"data":{"deleted":true,"id":"VIDEO_ID"}}`.
 | `SESSION_SECRET`            | Required, random 32+ character signing secret                        |
 | `AUTH_EMAIL`                | Seeds the `admins` collection when it is empty                       |
 | `AUTH_PASSWORD_HASH`        | Initial scrypt hash stored on that admin                             |
+| `ADMIN_LOCK_PIN`            | Optional four-digit screen-lock PIN. Server-only. Unset fails closed |
 | `FRONTEND_URL`              | Allowed browser origin                                               |
 | `APP_BASE_URL`              | External backend origin                                              |
 | `TRUST_PROXY`               | 0 by default; exact number of trusted proxy hops                     |

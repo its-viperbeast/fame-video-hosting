@@ -14,6 +14,10 @@ const schema = z.object({
   SESSION_SECRET: z.string().min(32),
   AUTH_EMAIL: z.email(),
   AUTH_PASSWORD_HASH: z.string().regex(/^[a-f0-9]{32}:[a-f0-9]{128}$/),
+  ADMIN_LOCK_PIN: z
+    .string()
+    .regex(/^\d{4}$/, "ADMIN_LOCK_PIN must be four digits")
+    .optional(),
   MAX_UPLOAD_BYTES: z.coerce
     .number()
     .int()
@@ -43,7 +47,11 @@ const schema = z.object({
 });
 
 export function parseEnv(input) {
-  const value = schema.parse({ ...input, MEDIA_BASE_URL: input.MEDIA_BASE_URL || undefined });
+  const value = schema.parse({
+    ...input,
+    MEDIA_BASE_URL: input.MEDIA_BASE_URL || undefined,
+    ADMIN_LOCK_PIN: input.ADMIN_LOCK_PIN || undefined,
+  });
   if (value.MEDIA_BASE_URL) {
     const media = new URL(value.MEDIA_BASE_URL);
     if (media.protocol !== "https:" || media.search || media.hash)

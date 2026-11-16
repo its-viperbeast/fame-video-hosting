@@ -70,6 +70,7 @@ export const api = {
     return data;
   },
   logout: clearToken,
+  verifyLock: (pin) => http.post("/auth/lock/verify", { pin }),
   list: (params) => http.get("/videos", { params }),
   details: (id) => http.get(`/videos/${id}`),
   play: (id) => http.get(`/videos/${id}/play`),

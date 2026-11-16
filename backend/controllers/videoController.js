@@ -196,7 +196,7 @@ export async function list(req, res) {
       search: z.string().max(180).default(""),
       sort: z.enum(["newest", "oldest", "name", "size"]).default("newest"),
       page: z.coerce.number().int().min(1).max(100000).default(1),
-      limit: z.coerce.number().int().min(1).max(48).default(6),
+      limit: z.coerce.number().int().min(1).max(48).default(24),
       filter: z.enum(["all", "favorites"]).default("all"),
       tag: tagIdQuery,
     })

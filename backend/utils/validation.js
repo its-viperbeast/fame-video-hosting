@@ -1,17 +1,20 @@
 import { z } from "zod";
 import { HttpError } from "./http.js";
 import { normalizeTagName } from "../models/Tag.js";
+import { normalizeVideoName } from "./videoName.js";
 
 export const fileSchema = (max) =>
   z
     .object({
-      name: z
-        .string()
-        .trim()
-        .min(5)
-        .max(180)
-        .regex(/\.mp4$/i, "Only .mp4 files are allowed")
-        .refine((s) => !/[\x00-\x1f/\\]/.test(s), "Invalid filename"),
+      name: z.preprocess(
+        (value) => (typeof value === "string" ? normalizeVideoName(value) : value),
+        z
+          .string()
+          .min(5)
+          .max(180)
+          .regex(/\.mp4$/i, "Only .mp4 files are allowed")
+          .refine((s) => !/[\x00-\x1f/\\]/.test(s), "Invalid filename"),
+      ),
       size: z.number().int().min(12).max(max),
       mimeType: z.literal("video/mp4"),
       duration: z.number().min(0).max(604800).optional().default(0),

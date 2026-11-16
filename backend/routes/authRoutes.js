@@ -1,7 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
-import { randomBytes, scryptSync } from "node:crypto";
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { env } from "../config/env.js";
 import Admin from "../models/Admin.js";
@@ -27,6 +27,11 @@ const signToken = (admin) =>
     algorithm: "HS256",
   });
 
+const PIN_FAILURE_LIMIT = 5;
+const PIN_PAUSE_MS = 30_000;
+// shortcut: failed attempts live in this process, share them when more than one API process runs.
+const pinAttempts = new Map();
+
 const router = Router();
 router.post(
   "/login",
@@ -42,6 +47,44 @@ router.post(
   }),
 );
 router.get("/me", requireAuth, (req, res) => ok(res, { user: publicAdmin(req.user) }));
+router.post(
+  "/lock/verify",
+  requireAuth,
+  wrap(async (req, res) => {
+    if (!env.ADMIN_LOCK_PIN)
+      throw new HttpError(503, "Screen lock is not configured.", "LOCK_NOT_CONFIGURED");
+    const pin = req.body?.pin;
+    if (typeof pin !== "string" || !/^\d{4}$/.test(pin))
+      throw new HttpError(400, "Enter a 4-digit PIN.", "VALIDATION_ERROR");
+
+    const now = Date.now();
+    const attempt = pinAttempts.get(req.user.email) ?? { failures: 0, pausedUntil: 0 };
+    if (attempt.pausedUntil > now) {
+      const seconds = Math.ceil((attempt.pausedUntil - now) / 1000);
+      throw new HttpError(
+        429,
+        `Too many attempts. Try again in ${seconds} seconds.`,
+        "LOCK_PAUSED",
+      );
+    }
+    // Both sides are four ASCII digits, so the buffers always have equal length.
+    if (timingSafeEqual(Buffer.from(pin), Buffer.from(env.ADMIN_LOCK_PIN))) {
+      pinAttempts.delete(req.user.email);
+      return ok(res, { unlocked: true });
+    }
+    attempt.failures += 1;
+    pinAttempts.set(req.user.email, attempt);
+    if (attempt.failures < PIN_FAILURE_LIMIT)
+      throw new HttpError(401, "Incorrect PIN.", "INVALID_PIN");
+    attempt.failures = 0;
+    attempt.pausedUntil = now + PIN_PAUSE_MS;
+    throw new HttpError(
+      429,
+      `Too many attempts. Try again in ${PIN_PAUSE_MS / 1000} seconds.`,
+      "LOCK_PAUSED",
+    );
+  }),
+);
 router.post(
   "/change-password",
   attemptLimit("Too many password attempts. Try again in 15 minutes."),

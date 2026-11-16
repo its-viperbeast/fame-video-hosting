@@ -321,10 +321,6 @@ export default function Dashboard({
         <>
           <div className="mb-7 flex flex-wrap items-center justify-between gap-5">
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 text-xs font-semibold tracking-[1.7px] text-muted">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#6ea0e8]" />
-                YOUR CREATIVE SPACE
-              </div>
               <h1 className="font-display my-2 text-3xl leading-tight font-bold tracking-tight text-heading">
                 {title}
               </h1>

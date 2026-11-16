@@ -13,7 +13,9 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { api } from "./services/api";
 import { libraryQuery } from "./services/libraryQuery";
+import AdminLock from "./components/AdminLock";
 import { Brand, Header, Sidebar } from "./components/Navbar";
+import useAdminLock, { clearLock } from "./hooks/useAdminLock";
 import VideoUpload from "./components/VideoUpload";
 import Dashboard from "./pages/Dashboard";
 import Tags from "./pages/Tags";
@@ -23,7 +25,7 @@ import ChangePassword from "./pages/ChangePassword";
 
 const initialStats = { total: 0, size: 0, recent: 0, favorites: 0 };
 
-function Workspace({ dark, onTheme, onSignedOut }) {
+function Workspace({ dark, onTheme, onSignedOut, onLock }) {
   const location = useLocation();
   const [data, setData] = useState(null),
     [loading, setLoading] = useState(true),
@@ -133,11 +135,12 @@ function Workspace({ dark, onTheme, onSignedOut }) {
         open={mobileNav}
         onClose={() => setMobileNav(false)}
         onLogout={() => (leaveGuard.current ? leaveGuard.current(onSignedOut) : onSignedOut())}
+        onLock={onLock}
         dark={dark}
         onTheme={onTheme}
       />
       <div className="flex min-h-dvh flex-col md:ml-57">
-        <Header onMenu={() => setMobileNav(true)} menuOpen={mobileNav} />
+        <Header onMenu={() => setMobileNav(true)} menuOpen={mobileNav} onLock={onLock} />
         <main
           className="mx-auto flex w-full max-w-[1680px] flex-1 flex-col px-4 pt-6 sm:px-6 sm:pt-8"
           id="main-content"
@@ -189,6 +192,7 @@ function Root() {
   const [dark, setDark] = useState(() => document.documentElement.dataset.theme === "dark"),
     [auth, setAuth] = useState("checking"),
     [authError, setAuthError] = useState("");
+  const lock = useAdminLock(auth === "in");
 
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
@@ -218,56 +222,66 @@ function Root() {
 
   const signedOut = useCallback(() => {
     api.logout();
+    clearLock();
     setAuth("out");
   }, []);
 
   return (
     <>
-      {auth === "checking" ? (
-        <div className="flex min-h-dvh flex-col items-center justify-center gap-4 text-sm text-muted">
-          <Brand />
-          <LoaderCircle className="animate-spin" size={24} />
-          <p>Opening your workspace…</p>
-        </div>
-      ) : (
-        <Routes>
-          <Route
-            path="/login"
-            element={
-              auth === "in" ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Login
-                  initialError={authError}
-                  onSuccess={() => {
-                    setAuthError("");
-                    setAuth("in");
-                  }}
-                />
-              )
-            }
-          />
-          <Route
-            path="*"
-            element={
-              auth === "in" ? (
-                <Workspace dark={dark} onTheme={() => setDark(!dark)} onSignedOut={signedOut} />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-        </Routes>
-      )}
-      <ToastContainer
-        position="top-right"
-        autoClose={3500}
-        hideProgressBar
-        theme={dark ? "dark" : "light"}
-        toastClassName="font-sans text-[13px] rounded-[10px] border border-line shadow-[0_8px_30px_#20334c15]"
-        newestOnTop
-        closeOnClick
-      />
+      <div inert={lock.locked ? true : undefined}>
+        {auth === "checking" ? (
+          <div className="flex min-h-dvh flex-col items-center justify-center gap-4 text-sm text-muted">
+            <Brand />
+            <LoaderCircle className="animate-spin" size={24} />
+            <p>Opening your workspace…</p>
+          </div>
+        ) : (
+          <Routes>
+            <Route
+              path="/login"
+              element={
+                auth === "in" ? (
+                  <Navigate to="/" replace />
+                ) : (
+                  <Login
+                    initialError={authError}
+                    onSuccess={() => {
+                      setAuthError("");
+                      lock.unlock();
+                      setAuth("in");
+                    }}
+                  />
+                )
+              }
+            />
+            <Route
+              path="*"
+              element={
+                auth === "in" ? (
+                  <Workspace
+                    dark={dark}
+                    onTheme={() => setDark(!dark)}
+                    onSignedOut={signedOut}
+                    onLock={lock.lock}
+                  />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
+            />
+          </Routes>
+        )}
+        <ToastContainer
+          position="top-right"
+          autoClose={3500}
+          hideProgressBar
+          theme={dark ? "dark" : "light"}
+          toastClassName="font-sans text-[13px] rounded-[10px] border border-line shadow-[0_8px_30px_#20334c15]"
+          newestOnTop
+          closeOnClick
+        />
+      </div>
+      {lock.locked ? <AdminLock onUnlocked={lock.unlock} onSignOut={signedOut} /> : null}
     </>
   );
 }

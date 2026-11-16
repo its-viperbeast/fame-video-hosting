@@ -6,6 +6,7 @@ import {
   KeyRound,
   FolderOpen,
   LayoutGrid,
+  Lock,
   LogOut,
   Menu,
   Moon,
@@ -41,7 +42,7 @@ export function Brand() {
   );
 }
 
-export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
+export function Sidebar({ stats, open, onClose, onLogout, onLock, dark, onTheme }) {
   const { pathname } = useLocation();
   const mobile = useIsMobile();
   const sidebar = useRef(null);
@@ -155,6 +156,16 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
           </button>
           <button
             className="flex min-h-11 w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-muted hover:bg-surfacehover hover:text-brand"
+            onClick={() => {
+              onClose();
+              onLock();
+            }}
+          >
+            <Lock size={17} />
+            <span className="flex-1 text-left">Lock</span>
+          </button>
+          <button
+            className="flex min-h-11 w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-muted hover:bg-surfacehover hover:text-brand"
             onClick={onLogout}
           >
             <LogOut size={17} />
@@ -173,7 +184,7 @@ const pageTitles = {
   "/change-password": "Change password",
 };
 
-export function Header({ onMenu, menuOpen }) {
+export function Header({ onMenu, menuOpen, onLock }) {
   const { pathname, search } = useLocation();
   const favorites =
     pathname === "/videos" && new URLSearchParams(search).get("filter") === "favorites";
@@ -192,6 +203,15 @@ export function Header({ onMenu, menuOpen }) {
         </button>
         <strong className="font-semibold text-[#33415a] dark:text-muted">{title}</strong>
       </div>
+      <button
+        className="inline-flex h-10 items-center gap-2 rounded-lg px-2.5 text-sm font-medium text-[#6e83a1] hover:bg-surfacehover hover:text-brand"
+        type="button"
+        aria-label="Lock"
+        onClick={onLock}
+      >
+        <Lock size={18} />
+        <span className="hidden sm:inline">Lock</span>
+      </button>
     </header>
   );
 }
