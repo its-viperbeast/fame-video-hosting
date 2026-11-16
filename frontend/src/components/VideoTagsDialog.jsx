@@ -114,44 +114,54 @@ export default function VideoTagsDialog({ video, onClose, onSaved, onTagClick })
   return (
     <Modal
       title={existing.length ? "Edit tags" : "Add tags"}
-      className="metadata-modal"
+      className="w-[min(560px,100%)]"
       onClose={() => !saving && onClose()}
       footer={
         <>
-          <button className="btn secondary" disabled={saving} onClick={onClose}>
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold whitespace-nowrap hover:bg-surfacehover disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={saving}
+            onClick={onClose}
+          >
             Cancel
           </button>
           <button
-            className="btn primary"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             type="submit"
             form="video-tags-form"
             disabled={saving || !canSave}
           >
-            {saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
+            {saving ? <LoaderCircle className="animate-spin" size={16} /> : <Save size={16} />}
             {saving ? "Saving…" : "Save tags"}
           </button>
         </>
       }
     >
-      <p className="modal-intro">{video.name}</p>
+      <p className="mb-5 text-xs leading-relaxed text-muted wrap-anywhere">{video.name}</p>
       <form id="video-tags-form" onSubmit={save}>
-        <label className="field-label" htmlFor="video-tags-input">
+        <label className="mt-4 mb-2 block text-sm font-medium" htmlFor="video-tags-input">
           Tags
         </label>
-        <div className="tag-chip-row" aria-live="polite">
-          {selected.length === 0 && <span className="muted">No tags yet — add one below.</span>}
+        <div className="my-2.5 flex min-h-6 flex-wrap gap-1.5" aria-live="polite">
+          {selected.length === 0 && (
+            <span className="text-xs text-muted">No tags yet — add one below.</span>
+          )}
           {selected.map((tag) => (
-            <span key={tag.name.toLowerCase()} className="tag-chip">
+            <span
+              key={tag.name.toLowerCase()}
+              className="inline-flex items-center gap-1.5 rounded-full bg-brandlight py-[3px] pr-1 pl-2.5 text-xs leading-normal font-semibold text-brand"
+            >
               <button
                 type="button"
                 title={tag.id ? `Filter by ${tag.name}` : tag.name}
                 onClick={() => tag.id && onTagClick?.(tag)}
+                className="hover:underline"
               >
                 {tag.name}
               </button>
               <button
                 type="button"
-                className="tag-chip-remove"
+                className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full text-muted hover:bg-[#dceaff] hover:text-brand"
                 aria-label={`Remove ${tag.name}`}
                 disabled={saving}
                 onClick={() => removeName(tag.name)}
@@ -161,11 +171,11 @@ export default function VideoTagsDialog({ video, onClose, onSaved, onTagClick })
             </span>
           ))}
         </div>
-        <div className="tag-input-wrap" ref={boxRef}>
-          <Tags size={15} />
+        <div className="relative mt-2.5 flex items-center gap-2" ref={boxRef}>
+          <Tags size={15} className="pointer-events-none absolute left-3 text-[#98a3b4]" />
           <input
             id="video-tags-input"
-            className="form-input tag-input"
+            className="w-full rounded-lg border border-line bg-surface py-3 pr-3 pl-[34px] text-sm text-ink outline-none focus:border-[#89b6f4] focus:ring-2 focus:ring-[#2877e910]"
             value={input}
             onChange={(event) => {
               setInput(event.target.value);
@@ -185,35 +195,57 @@ export default function VideoTagsDialog({ video, onClose, onSaved, onTagClick })
             aria-describedby="video-tags-hint"
           />
           {open && (suggestions.length > 0 || Boolean(query)) && (
-            <ul className="tag-suggest" role="listbox" aria-label="Tag suggestions">
+            <ul
+              className="absolute top-[calc(100%+6px)] right-0 left-0 z-20 m-0 max-h-[220px] list-none overflow-auto rounded-lg border border-line bg-surface p-1.5 shadow-[0_8px_30px_#20334c18]"
+              role="listbox"
+              aria-label="Tag suggestions"
+            >
               {query &&
                 !suggestions.some((t) => t.name.toLowerCase() === query.toLowerCase()) &&
                 !selected.some((t) => t.name.toLowerCase() === query.toLowerCase()) && (
                   <li>
-                    <button type="button" onMouseDown={() => addName(query)}>
-                      <span className="tag-suggest-new">Create</span>“{query}”
+                    <button
+                      type="button"
+                      onMouseDown={() => addName(query)}
+                      className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs font-medium hover:bg-surfacehover"
+                    >
+                      <span>
+                        <span className="mr-1.5 rounded bg-brandlight px-1.5 py-px text-brand">
+                          Create
+                        </span>
+                        “{query}”
+                      </span>
                     </button>
                   </li>
                 )}
               {suggestions.map((tag) => (
                 <li key={tag.id}>
-                  <button type="button" onMouseDown={() => addName(tag.name)}>
+                  <button
+                    type="button"
+                    onMouseDown={() => addName(tag.name)}
+                    className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs font-medium hover:bg-surfacehover"
+                  >
                     {tag.name}
-                    {tag.videoCount > 0 && <span>{tag.videoCount}</span>}
+                    {tag.videoCount > 0 && (
+                      <span className="font-normal text-muted">{tag.videoCount}</span>
+                    )}
                   </button>
                 </li>
               ))}
             </ul>
           )}
         </div>
-        <p className="metadata-hint" id="video-tags-hint">
+        <p
+          className="mt-2 flex flex-wrap justify-between gap-x-3 gap-y-1.5 text-[11px] text-muted"
+          id="video-tags-hint"
+        >
           New names are created automatically on save.
           <span>
             {selected.length} / {MAX_TAGS}
           </span>
         </p>
         {error && (
-          <p className="error-text" role="alert">
+          <p className="mt-2 block text-xs leading-relaxed text-[#d95665]" role="alert">
             {error}
           </p>
         )}

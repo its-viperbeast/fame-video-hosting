@@ -25,16 +25,18 @@ export default function Login({ onSuccess, initialError = "" }) {
   }
 
   return (
-    <main className="login-page">
-      <form onSubmit={submit}>
-        <Brand />
-        <h1>Sign in</h1>
+    <main className="grid min-h-dvh place-items-center bg-bg px-6 py-8">
+      <form onSubmit={submit} className="w-full max-w-[340px]">
+        <div className="mb-7">
+          <Brand />
+        </div>
+        <h1 className="font-display text-[28px] font-bold tracking-tight text-heading">Sign in</h1>
 
-        <label className="field-label" htmlFor="login-email">
+        <label className="mt-5 mb-2 block text-sm font-medium" htmlFor="login-email">
           Email
         </label>
         <input
-          className="form-input"
+          className="w-full rounded-lg border border-line bg-surface px-3 py-3 text-sm text-ink outline-none focus:border-[#89b6f4] focus:ring-2 focus:ring-[#2877e910]"
           id="login-email"
           type="email"
           autoComplete="email"
@@ -45,12 +47,12 @@ export default function Login({ onSuccess, initialError = "" }) {
           autoFocus
         />
 
-        <label className="field-label" htmlFor="login-password">
+        <label className="mt-4 mb-2 block text-sm font-medium" htmlFor="login-password">
           Password
         </label>
-        <div className="password-field">
+        <div className="relative">
           <input
-            className="form-input"
+            className="w-full rounded-lg border border-line bg-surface px-3 py-3 pr-[45px] text-sm text-ink outline-none focus:border-[#89b6f4] focus:ring-2 focus:ring-[#2877e910]"
             id="login-password"
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
@@ -60,7 +62,7 @@ export default function Login({ onSuccess, initialError = "" }) {
             required
           />
           <button
-            className="icon-btn"
+            className="absolute top-1.5 right-1.5 inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-surfacehover hover:text-brand"
             type="button"
             aria-label={showPassword ? "Hide password" : "Show password"}
             aria-pressed={showPassword}
@@ -71,16 +73,23 @@ export default function Login({ onSuccess, initialError = "" }) {
         </div>
 
         {error && (
-          <p className="login-error" role="alert">
-            <AlertCircle size={14} />
+          <p
+            className="mt-4 flex items-start gap-1.5 text-[13px] leading-relaxed text-[#d05b69]"
+            role="alert"
+          >
+            <AlertCircle size={14} className="mt-0.5 shrink-0" />
             {error}
           </p>
         )}
 
-        <button className="btn primary" type="submit" disabled={busy}>
+        <button
+          className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          type="submit"
+          disabled={busy}
+        >
           {busy ? (
             <>
-              <LoaderCircle className="spin" size={17} />
+              <LoaderCircle className="animate-spin" size={17} />
               Signing in…
             </>
           ) : (

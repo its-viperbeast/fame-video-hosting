@@ -121,8 +121,11 @@ function Workspace({ dark, onTheme, onSignedOut }) {
   }
 
   return (
-    <div className="app-shell">
-      <a className="skip-link" href="#main-content">
+    <div className="min-h-dvh bg-bg">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-4 focus:z-100 focus:rounded-lg focus:bg-brand focus:px-4 focus:py-3 focus:text-white"
+      >
         Skip to content
       </a>
       <Sidebar
@@ -133,9 +136,13 @@ function Workspace({ dark, onTheme, onSignedOut }) {
         dark={dark}
         onTheme={onTheme}
       />
-      <div className="main-shell">
+      <div className="flex min-h-dvh flex-col md:ml-57">
         <Header onMenu={() => setMobileNav(true)} menuOpen={mobileNav} />
-        <main className="main-content" id="main-content" tabIndex={-1}>
+        <main
+          className="mx-auto flex w-full max-w-[1680px] flex-1 flex-col px-4 pt-6 sm:px-6 sm:pt-8"
+          id="main-content"
+          tabIndex={-1}
+        >
           <Routes>
             <Route path="/upload" element={<Upload />} />
             <Route path="/tags" element={<Tags />} />
@@ -217,9 +224,9 @@ function Root() {
   return (
     <>
       {auth === "checking" ? (
-        <div className="app-loading">
+        <div className="flex min-h-dvh flex-col items-center justify-center gap-4 text-sm text-muted">
           <Brand />
-          <LoaderCircle className="spin" size={24} />
+          <LoaderCircle className="animate-spin" size={24} />
           <p>Opening your workspace…</p>
         </div>
       ) : (
@@ -257,7 +264,7 @@ function Root() {
         autoClose={3500}
         hideProgressBar
         theme={dark ? "dark" : "light"}
-        toastClassName="frame-toast"
+        toastClassName="font-sans text-[13px] rounded-[10px] border border-line shadow-[0_8px_30px_#20334c15]"
         newestOnTop
         closeOnClick
       />

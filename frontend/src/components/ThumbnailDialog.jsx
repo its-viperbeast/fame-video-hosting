@@ -65,39 +65,55 @@ export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
   return (
     <Modal
       title="Change thumbnail"
-      className="thumbnail-modal"
+      className="max-w-[580px]"
       onClose={() => !saving && onClose()}
       footer={
         <>
-          <button className="btn secondary" disabled={saving} onClick={onClose}>
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold whitespace-nowrap hover:bg-surfacehover disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={saving}
+            onClick={onClose}
+          >
             Cancel
           </button>
-          <button className="btn primary" disabled={!file || saving} onClick={save}>
-            {saving ? <LoaderCircle className="spin" size={16} /> : <ImageUp size={16} />}
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!file || saving}
+            onClick={save}
+          >
+            {saving ? <LoaderCircle className="animate-spin" size={16} /> : <ImageUp size={16} />}
             {saving ? (progress < 100 ? `Uploading ${progress}%` : "Saving…") : "Save thumbnail"}
           </button>
         </>
       }
     >
-      <p className="modal-intro">
+      <p className="mb-5 text-xs leading-relaxed text-muted">
         Choose a new image for <strong>{video.name}</strong>. It’s saved as a 1920 × 1080 WebP.
         Other shapes get bars at the edges and are never stretched.
       </p>
-      <div className="thumbnail-compare">
-        <figure>
-          <span className="thumbnail-frame">
+      <div className="mt-4.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+        <figure className="m-0 min-w-0">
+          <span className="grid aspect-video w-full place-items-center overflow-hidden rounded-lg border border-line bg-[#0d1622] text-[#7094bf]">
             {video.thumbnailUrl ? (
-              <img src={video.thumbnailUrl} alt="Current thumbnail" />
+              <img
+                src={video.thumbnailUrl}
+                alt="Current thumbnail"
+                className="block h-full w-full object-contain"
+              />
             ) : (
               <FileVideo size={30} />
             )}
           </span>
-          <figcaption>Current</figcaption>
+          <figcaption className="mt-1.5 truncate text-xs whitespace-nowrap text-muted">
+            Current
+          </figcaption>
         </figure>
-        <figure>
+        <figure className="m-0 min-w-0">
           <button
             type="button"
-            className={`thumbnail-frame thumbnail-pick ${dragging ? "dragging" : ""}`}
+            className={`grid aspect-video w-full place-items-center content-center gap-1.5 overflow-hidden rounded-lg border border-dashed bg-brandlight p-0 text-xs text-brand disabled:opacity-50 ${
+              preview ? "border-solid bg-[#0d1622]" : ""
+            } ${dragging ? "border-brand" : "border-[#b6cff3] dark:border-[#385578]"}`}
             disabled={saving}
             aria-label={file ? `Replace ${file.name}` : "Choose an image"}
             onClick={() => input.current.click()}
@@ -113,7 +129,11 @@ export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
             }}
           >
             {preview ? (
-              <img src={preview} alt="New thumbnail preview" />
+              <img
+                src={preview}
+                alt="New thumbnail preview"
+                className="block h-full w-full object-contain"
+              />
             ) : (
               <>
                 <ImageUp size={26} />
@@ -121,10 +141,15 @@ export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
               </>
             )}
           </button>
-          <figcaption title={file?.name}>{file ? file.name : "New"}</figcaption>
+          <figcaption
+            className="mt-1.5 truncate text-xs whitespace-nowrap text-muted"
+            title={file?.name}
+          >
+            {file ? file.name : "New"}
+          </figcaption>
         </figure>
       </div>
-      <p className="thumbnail-hint">
+      <p className="mt-3.5 text-xs text-muted">
         JPEG, PNG, or WebP · Up to {formatBytes(maxSize, 0)} · At least {MIN_THUMBNAIL_SIDE} px on
         each side
       </p>
@@ -136,7 +161,7 @@ export default function ThumbnailDialog({ video, maxSize, onClose, onSaved }) {
         onChange={(event) => choose(event.target.files[0])}
       />
       {error && (
-        <p className="error-text" role="alert">
+        <p className="mt-2 block text-xs leading-relaxed text-[#d95665]" role="alert">
           {error}
         </p>
       )}

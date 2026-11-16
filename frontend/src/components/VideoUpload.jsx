@@ -196,32 +196,45 @@ export default function VideoUpload({
   const leaveDialog = leaving && (
     <Modal
       title="Leave this page?"
-      className="delete-modal leave-modal"
+      className="max-w-[450px]"
       onClose={stay}
       footer={
         <>
-          <button className="btn secondary" data-autofocus onClick={stay}>
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold whitespace-nowrap hover:bg-surfacehover"
+            data-autofocus
+            onClick={stay}
+          >
             {busy ? "Continue uploading" : "Stay on this page"}
           </button>
-          <button className={`btn ${busy ? "danger" : "primary"}`} onClick={leave}>
+          <button
+            className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white hover:brightness-110 ${
+              busy ? "bg-[#df424b]" : "bg-brand shadow-[0_3px_6px_#2877e919]"
+            }`}
+            onClick={leave}
+          >
             {busy ? "Leave and cancel uploads" : "Leave"}
           </button>
         </>
       }
     >
-      <div className="delete-icon leave-icon">
+      <div className="mb-4 grid h-13 w-13 place-items-center rounded-full bg-[#fff4e0] text-[#b7791f] dark:bg-[#4a3a1f] dark:text-[#e2b363]">
         <TriangleAlert size={24} />
       </div>
       {busy ? (
         <>
-          <p>Uploads are still in progress. Leaving this page will cancel unfinished uploads.</p>
-          <span className="muted">
+          <p className="mb-3 text-xs leading-loose wrap-anywhere">
+            Uploads are still in progress. Leaving this page will cancel unfinished uploads.
+          </p>
+          <span className="text-xs text-muted">
             {plural(activeCount + processingCount + queuedCount, "upload")} will be cancelled.
             Completed uploads are kept.
           </span>
         </>
       ) : (
-        <p>All uploads have finished, so nothing will be cancelled.</p>
+        <p className="text-xs leading-loose">
+          All uploads have finished, so nothing will be cancelled.
+        </p>
       )}
     </Modal>
   );
@@ -230,12 +243,18 @@ export default function VideoUpload({
   const waiting = busy && !pending.length;
   return (
     <>
-      <div className="upload-page-layout">
-        <section className="upload-page-panel">
-          <div className="upload-panel-body">
-            <p className="modal-intro">Big ideas deserve a little space. Add your videos below.</p>
+      <div className="mx-auto w-full max-w-[760px]">
+        <section className="rounded-xl border border-line bg-surface shadow-[0_3px_8px_#26395408]">
+          <div className="px-5 py-6 sm:px-7">
+            <p className="mb-5 text-xs leading-relaxed text-muted">
+              Big ideas deserve a little space. Add your videos below.
+            </p>
             <div
-              className={`modal-dropzone ${dragging ? "dragging" : ""} ${inspecting ? "is-unavailable" : ""}`}
+              className={`cursor-pointer rounded-[10px] border border-dashed p-6 text-center transition-colors ${
+                dragging
+                  ? "border-brand bg-[#dbeaff] dark:bg-line"
+                  : "border-[#b6cff3] bg-brandlight dark:border-[#385578]"
+              } ${inspecting ? "cursor-default" : ""}`}
               onDragOver={(e) => {
                 e.preventDefault();
                 setDragging(true);
@@ -250,18 +269,24 @@ export default function VideoUpload({
                 if (event.target !== input.current && !inspecting) input.current?.click();
               }}
             >
-              <div className="upload-cloud">
+              <div className="mx-auto mb-3.5 grid h-15 w-15 place-items-center rounded-[14px] bg-surface text-[#6096e4] shadow-[0_3px_8px_#377ac00a]">
                 <CloudUpload size={30} />
               </div>
-              <h3>Drop your videos here</h3>
-              <p>
+              <h3 className="font-display m-0 mb-2 text-base font-bold text-heading">
+                Drop your videos here
+              </h3>
+              <p className="text-xs text-[#8c9db4]">
                 or{" "}
-                <button className="text-btn" type="button" disabled={inspecting}>
+                <button
+                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:underline hover:underline-offset-4"
+                  type="button"
+                  disabled={inspecting}
+                >
                   browse files <ArrowUpRight size={14} />
                 </button>{" "}
                 from your computer
               </p>
-              <span>
+              <span className="mt-3 block text-xs leading-relaxed text-[#9babbe] dark:text-muted">
                 MP4 format · Up to {formatBytes(maxSize, 0)} per video
                 <br />
                 Up to {MAX_CONCURRENT_UPLOADS} videos upload at once
@@ -276,8 +301,8 @@ export default function VideoUpload({
               />
             </div>
             {inspecting && (
-              <div className="inspecting">
-                <LoaderCircle className="spin" size={16} />
+              <div className="flex items-center justify-center gap-1.5 p-4 text-xs text-muted">
+                <LoaderCircle className="animate-spin" size={16} />
                 Reading video previews…
               </div>
             )}
@@ -285,12 +310,23 @@ export default function VideoUpload({
               {announcement}
             </p>
             {items.length > 0 && (
-              <div className="upload-queue">
-                <div className="queue-heading">
-                  <span ref={queueHeading} tabIndex={-1}>
-                    Upload queue <b>{items.length}</b>
+              <div className="mt-6">
+                <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span
+                    tabIndex={-1}
+                    ref={queueHeading}
+                    className="rounded focus:outline-2 focus:outline-brand"
+                  >
+                    Upload queue{" "}
+                    <b className="ml-1 rounded bg-brandlight px-1.5 py-0.5 text-xs text-brand">
+                      {items.length}
+                    </b>
                     {busy && (
-                      <span className="queue-activity" role="status" aria-live="polite">
+                      <span
+                        className="ml-2 text-xs leading-relaxed text-muted"
+                        role="status"
+                        aria-live="polite"
+                      >
                         {[
                           activeCount && `${activeCount} uploading`,
                           processingCount && `${processingCount} processing`,
@@ -301,10 +337,10 @@ export default function VideoUpload({
                       </span>
                     )}
                   </span>
-                  <span className="queue-actions">
+                  <span className="flex items-center gap-4">
                     {busy && (
                       <button
-                        className="text-btn upload-cancel"
+                        className="inline-flex min-h-8 items-center gap-1.5 text-[13px] font-semibold text-muted hover:text-[#d95665]"
                         onClick={() => {
                           cancelAll();
                           // The button disappears; keep focus on the queue.
@@ -317,7 +353,7 @@ export default function VideoUpload({
                     )}
                     {items.some((i) => i.status === "completed") && (
                       <button
-                        className="text-btn"
+                        className="inline-flex min-h-8 items-center gap-1.5 text-[13px] font-semibold text-brand hover:underline hover:underline-offset-4"
                         onClick={() =>
                           items.filter((i) => i.status === "completed").forEach((i) => remove(i.id))
                         }
@@ -328,13 +364,13 @@ export default function VideoUpload({
                   </span>
                 </div>
                 {busy && overall.count > 0 && (
-                  <div className="upload-overall">
-                    <div className="upload-overall-head">
+                  <div className="my-2 rounded-lg border border-line bg-surfacehover px-3.5 py-3">
+                    <div className="flex justify-between text-xs">
                       <strong>Overall progress</strong>
-                      <span>{overall.percent}%</span>
+                      <span className="font-semibold text-brand">{overall.percent}%</span>
                     </div>
                     <div
-                      className="progress-track"
+                      className="mt-2.5 h-1 overflow-hidden rounded bg-[#e8edf4] dark:bg-line"
                       role="progressbar"
                       aria-label="Overall upload progress"
                       aria-valuemin="0"
@@ -342,9 +378,12 @@ export default function VideoUpload({
                       aria-valuenow={overall.percent}
                       aria-valuetext={`${overall.percent}%, ${formatBytes(overall.sent)} of ${formatBytes(overall.total)}`}
                     >
-                      <span style={{ width: `${overall.percent}%` }} />
+                      <span
+                        className="block h-full bg-brand transition-[width] duration-150"
+                        style={{ width: `${overall.percent}%` }}
+                      />
                     </div>
-                    <p>
+                    <p className="mt-2 text-xs text-muted">
                       {formatBytes(overall.sent)} of {formatBytes(overall.total)} transferred ·{" "}
                       {overall.completed} of {plural(overall.count, "video")} completed
                     </p>
@@ -362,22 +401,24 @@ export default function VideoUpload({
                 ))}
               </div>
             )}
-            <div className="upload-tip">
+            <div className="mt-5 flex items-center gap-2.5 text-[#92a1b5]">
               <FileVideo size={18} />
-              <p>Bring your best quality. We’ll keep every detail, just as you intended.</p>
+              <p className="text-xs leading-relaxed">
+                Bring your best quality. We’ll keep every detail, just as you intended.
+              </p>
             </div>
           </div>
-          <footer className="upload-panel-footer">
-            <span className="upload-privacy">
-              <ShieldCheck size={15} />
-              Your videos are private by default
-            </span>
+          <footer className="flex flex-wrap items-center gap-3 rounded-b-xl border-t border-line bg-surfacehover px-5 py-4 sm:px-7">
             <button
-              className="btn primary"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full"
               disabled={inspecting || !pending.length}
               onClick={() => upload(pending)}
             >
-              {waiting ? <LoaderCircle size={17} className="spin" /> : <CloudUpload size={17} />}{" "}
+              {waiting ? (
+                <LoaderCircle size={17} className="animate-spin" />
+              ) : (
+                <CloudUpload size={17} />
+              )}{" "}
               {waiting
                 ? "Uploading…"
                 : `${busy ? "Add" : "Upload"} ${pending.length ? plural(pending.length, "video") : "videos"}${busy ? " to queue" : ""}`}
@@ -386,8 +427,16 @@ export default function VideoUpload({
         </section>
       </div>
       {preview && (
-        <Modal title={preview.file.name} onClose={() => setPreview(null)} className="player-modal">
-          <video className="local-preview" src={preview.url} controls playsInline autoPlay />
+        <Modal title={preview.file.name} onClose={() => setPreview(null)} className="max-w-[870px]">
+          <div className="-m-5 sm:-m-6">
+            <video
+              className="block max-h-[65vh] w-full bg-[#0c1523]"
+              src={preview.url}
+              controls
+              playsInline
+              autoPlay
+            />
+          </div>
         </Modal>
       )}
       {leaveDialog}

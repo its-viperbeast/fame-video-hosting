@@ -33,34 +33,40 @@ export default function VideoMetadataDialog({ video, field, onClose, onSaved }) 
   return (
     <Modal
       title={renaming ? "Rename video" : video.note ? "Edit note" : "Add note"}
-      className="metadata-modal"
+      className="w-[min(560px,100%)]"
       onClose={() => !saving && onClose()}
       footer={
         <>
-          <button className="btn secondary" disabled={saving} onClick={onClose}>
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold whitespace-nowrap hover:bg-surfacehover disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={saving}
+            onClick={onClose}
+          >
             Cancel
           </button>
           <button
-            className="btn primary"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             type="submit"
             form="video-metadata-form"
             disabled={saving || !canSave}
           >
-            {saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
+            {saving ? <LoaderCircle className="animate-spin" size={16} /> : <Save size={16} />}
             {saving ? "Saving…" : renaming ? "Save name" : "Save note"}
           </button>
         </>
       }
     >
-      <p className="modal-intro">{renaming ? "Choose a name for your library." : video.name}</p>
+      <p className="mb-5 text-xs leading-relaxed text-muted wrap-anywhere">
+        {renaming ? "Choose a name for your library." : video.name}
+      </p>
       <form id="video-metadata-form" onSubmit={save}>
-        <label className="field-label" htmlFor="video-metadata-value">
+        <label className="mt-4 mb-2 block text-sm font-medium" htmlFor="video-metadata-value">
           {renaming ? "Video name" : "Note"}
         </label>
         {renaming ? (
           <input
             id="video-metadata-value"
-            className="form-input"
+            className="w-full rounded-lg border border-line bg-surface px-3 py-3 text-sm text-ink outline-none focus:border-[#89b6f4] focus:ring-2 focus:ring-[#2877e910]"
             value={value}
             onChange={(event) => setValue(event.target.value)}
             maxLength={maxLength}
@@ -71,7 +77,7 @@ export default function VideoMetadataDialog({ video, field, onClose, onSaved }) 
         ) : (
           <textarea
             id="video-metadata-value"
-            className="form-input metadata-note-input"
+            className="min-h-[130px] w-full resize-y rounded-lg border border-line bg-surface px-3 py-3 text-sm leading-relaxed text-ink outline-none focus:border-[#89b6f4] focus:ring-2 focus:ring-[#2877e910]"
             value={value}
             onChange={(event) => setValue(event.target.value)}
             maxLength={maxLength}
@@ -81,14 +87,17 @@ export default function VideoMetadataDialog({ video, field, onClose, onSaved }) 
             aria-describedby="video-metadata-hint"
           />
         )}
-        <p className="metadata-hint" id="video-metadata-hint">
+        <p
+          className="mt-2 flex flex-wrap justify-between gap-x-3 gap-y-1.5 text-[11px] text-muted"
+          id="video-metadata-hint"
+        >
           {renaming ? "Up to 180 characters." : "Clear the text to remove the note."}
           <span>
             {value.length.toLocaleString()} / {maxLength.toLocaleString()}
           </span>
         </p>
         {error && (
-          <p className="error-text" role="alert">
+          <p className="mt-2 block text-xs leading-relaxed text-[#d95665]" role="alert">
             {error}
           </p>
         )}

@@ -29,20 +29,31 @@ export default function ChangePassword() {
     }
   }
 
+  const inputClass =
+    "w-full min-h-12 rounded-lg border border-line bg-surface px-3 py-3 text-sm text-ink outline-none focus:border-[#89b6f4] focus:ring-2 focus:ring-[#2877e910]";
+
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <h1>Change password</h1>
-          <p>Choose a new password for your Frame account.</p>
-        </div>
+      <div className="mb-7 min-w-0">
+        <h1 className="font-display my-2 text-3xl leading-tight font-bold tracking-tight text-heading">
+          Change password
+        </h1>
+        <p className="text-sm leading-relaxed text-muted">
+          Choose a new password for your Frame account.
+        </p>
       </div>
-      <form className="change-password-form" onSubmit={submit}>
-        <label className="field-label" htmlFor="current-password">
+      <form
+        className="w-full max-w-[440px] rounded-xl border border-line bg-surface p-6"
+        onSubmit={submit}
+      >
+        <label
+          className="mt-4 mb-2 block text-sm font-medium first:mt-0"
+          htmlFor="current-password"
+        >
           Current password
         </label>
         <input
-          className="form-input"
+          className={inputClass}
           id="current-password"
           type="password"
           autoComplete="current-password"
@@ -50,11 +61,11 @@ export default function ChangePassword() {
           onChange={(event) => setCurrent(event.target.value)}
           required
         />
-        <label className="field-label" htmlFor="new-password">
+        <label className="mt-4 mb-2 block text-sm font-medium" htmlFor="new-password">
           New password
         </label>
         <input
-          className="form-input"
+          className={inputClass}
           id="new-password"
           type="password"
           autoComplete="new-password"
@@ -64,11 +75,11 @@ export default function ChangePassword() {
           onChange={(event) => setNext(event.target.value)}
           required
         />
-        <label className="field-label" htmlFor="confirm-password">
+        <label className="mt-4 mb-2 block text-sm font-medium" htmlFor="confirm-password">
           Confirm new password
         </label>
         <input
-          className="form-input"
+          className={inputClass}
           id="confirm-password"
           type="password"
           autoComplete="new-password"
@@ -78,23 +89,27 @@ export default function ChangePassword() {
           onChange={(event) => setConfirm(event.target.value)}
           required
         />
-        <p className="change-password-hint">Use 12 to 256 characters.</p>
+        <p className="mt-2 text-xs text-muted">Use 12 to 256 characters.</p>
         {error && (
-          <p className="login-error" role="alert">
+          <p className="mt-2 flex items-center gap-1.5 text-[13px] text-[#d05b69]" role="alert">
             <AlertCircle size={14} />
             {error}
           </p>
         )}
         {saved && (
-          <p className="password-saved" role="status">
-            <CheckCircle2 size={15} />
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-muted" role="status">
+            <CheckCircle2 size={15} className="text-[#229b78]" />
             Password changed.
           </p>
         )}
-        <button className="btn primary" type="submit" disabled={busy}>
+        <button
+          className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          type="submit"
+          disabled={busy}
+        >
           {busy ? (
             <>
-              <LoaderCircle className="spin" size={17} />
+              <LoaderCircle className="animate-spin" size={17} />
               Saving…
             </>
           ) : (
