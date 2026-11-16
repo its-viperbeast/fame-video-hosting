@@ -1,3 +1,5 @@
+const tagId = (value) => (typeof value === "string" && /^[a-f\d]{24}$/i.test(value) ? value : "");
+
 export function libraryQuery(pathname, query, search = "", sort = "newest") {
   if (pathname !== "/videos") {
     return { filter: "all", page: 1, search: "", sort: "newest" };
@@ -9,5 +11,6 @@ export function libraryQuery(pathname, query, search = "", sort = "newest") {
     page: Number.isSafeInteger(page) && page > 0 && page <= 100000 ? page : 1,
     search,
     sort,
+    tag: tagId(params.get("tag")),
   };
 }

@@ -8,6 +8,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { ok, HttpError } from "./utils/http.js";
 import authRoutes from "./routes/authRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
+import tagRoutes from "./routes/tagRoutes.js";
 
 export const app = express();
 app.disable("x-powered-by");
@@ -44,5 +45,6 @@ app.get("/api/health", (_req, res) => {
 });
 app.use("/api/auth", authRoutes);
 app.use("/api/videos", videoRoutes);
+app.use("/api/tags", tagRoutes);
 app.use((_req, _res, next) => next(new HttpError(404, "Endpoint not found.", "NOT_FOUND")));
 app.use(errorHandler);

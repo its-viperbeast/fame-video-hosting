@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { HttpError } from "./http.js";
+import { normalizeTagName } from "../models/Tag.js";
 
 export const fileSchema = (max) =>
   z
@@ -18,6 +19,23 @@ export const fileSchema = (max) =>
     .strict();
 
 export const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid resource ID");
+
+// An empty tag query (e.g. `?tag=`) means "no tag filter", not an error.
+export const tagIdQuery = z.preprocess(
+  (value) => (value === "" || value === null ? undefined : value),
+  z
+    .string()
+    .regex(/^[a-f\d]{24}$/i, "Invalid tag")
+    .optional(),
+);
+
+export const tagNameInput = z
+  .string()
+  .trim()
+  .min(1)
+  .max(30)
+  .refine((value) => !/[\x00-\x1f\x7f/\\]/.test(value), "Invalid tag name")
+  .transform(normalizeTagName);
 
 const mp4Brands = new Set([
   "isom",

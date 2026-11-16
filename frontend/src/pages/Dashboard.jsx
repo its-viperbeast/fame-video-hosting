@@ -27,7 +27,9 @@ import VideoCard from "../components/VideoCard";
 import VideoPlayer from "../components/VideoPlayer";
 import ThumbnailDialog from "../components/ThumbnailDialog";
 import VideoMetadataDialog from "../components/VideoMetadataDialog";
+import VideoTagsDialog from "../components/VideoTagsDialog";
 import Modal from "../components/Modal";
+import { libraryQuery } from "../services/libraryQuery";
 
 function MetricCards({ stats }) {
   return (
@@ -157,6 +159,7 @@ export default function Dashboard({
   const query = new URLSearchParams(location.search);
   const filter = query.get("filter") === "favorites" ? "favorites" : "all";
   const page = Number(query.get("page")) || 1;
+  const activeTag = libraryQuery(location.pathname, location.search).tag;
   const isOverview = location.pathname !== "/videos";
 
   useEffect(() => {
@@ -239,6 +242,22 @@ export default function Dashboard({
     refreshSilently();
   }
 
+  // Tag filtering lives in the library, so Overview clicks open /videos.
+  function filterByTag(tag) {
+    const next = new URLSearchParams(isOverview ? "" : location.search);
+    next.set("tag", tag.id || tag);
+    next.delete("page");
+    navigate(`/videos?${next}`);
+  }
+
+  function clearTag() {
+    const next = new URLSearchParams(location.search);
+    next.delete("tag");
+    next.delete("page");
+    const rest = next.toString();
+    navigate(`${location.pathname}${rest ? `?${rest}` : ""}`);
+  }
+
   const cardActions = {
     onPlay: setPlayer,
     onDelete: (video) => confirmDelete([video]),
@@ -248,6 +267,8 @@ export default function Dashboard({
     onThumbnail: setThumbnailFor,
     onRename: (video) => setMetadataFor({ video, field: "name" }),
     onNote: (video) => setMetadataFor({ video, field: "note" }),
+    onTags: (video) => setMetadataFor({ video, field: "tags" }),
+    onTagClick: (tag) => filterByTag(tag),
   };
   const [title, subtitle] =
     filter === "favorites"
@@ -470,6 +491,24 @@ export default function Dashboard({
             </div>
           </div>
 
+          {activeTag && (
+            <div className="tag-filter-bar">
+              <span className="tag-chip tag-chip-static">
+                {(() => {
+                  const found = data?.videos
+                    ?.flatMap((v) => v.tags || [])
+                    .find((t) => t.id === activeTag);
+                  return found ? found.name : "Tagged videos";
+                })()}
+              </span>
+              <button className="text-btn" onClick={clearTag}>
+                Clear tag filter
+              </button>
+              <button className="text-btn" onClick={() => navigate(`/tags`)}>
+                Manage tags
+              </button>
+            </div>
+          )}
           <VideoGallery
             data={data}
             loading={loading}
@@ -518,14 +557,24 @@ export default function Dashboard({
           onSaved={thumbnailSaved}
         />
       )}
-      {metadataFor && (
-        <VideoMetadataDialog
-          key={`${metadataFor.video.id}-${metadataFor.field}`}
+      {metadataFor && metadataFor.field === "tags" ? (
+        <VideoTagsDialog
+          key={`${metadataFor.video.id}-tags`}
           video={metadataFor.video}
-          field={metadataFor.field}
           onClose={() => setMetadataFor(null)}
           onSaved={metadataSaved}
+          onTagClick={filterByTag}
         />
+      ) : (
+        metadataFor && (
+          <VideoMetadataDialog
+            key={`${metadataFor.video.id}-${metadataFor.field}`}
+            video={metadataFor.video}
+            field={metadataFor.field}
+            onClose={() => setMetadataFor(null)}
+            onSaved={metadataSaved}
+          />
+        )
       )}
       {deleting && (
         <Modal

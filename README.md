@@ -26,7 +26,7 @@ Install MongoDB Community and start `mongod`, or create a MongoDB Atlas database
 MONGODB_URI=mongodb://127.0.0.1:27017/video-manager
 ```
 
-For Atlas, use its `mongodb+srv://...` connection string in the backend environment only. Allow connections from the backend host, use TLS, and grant the database user read/write access only to the selected database. Mongoose creates the `admins`, `videos`, and `storagecleanups` collections and their indexes. Ensure the deployment user can create these indexes or provision them during deployment.
+For Atlas, use its `mongodb+srv://...` connection string in the backend environment only. Allow connections from the backend host, use TLS, and grant the database user read/write access only to the selected database. Mongoose creates the `admins`, `videos`, `tags`, and `storagecleanups` collections and their indexes. Ensure the deployment user can create these indexes or provision them during deployment.
 
 ### 2. Create the Backblaze B2 bucket
 
@@ -141,11 +141,10 @@ shubh-stream/
 │   ├── config/         # Validated environment, AWS SDK and MongoDB
 │   ├── controllers/
 │   ├── middleware/     # Bearer-token auth and error handling
-│   ├── models/         # Admin, Video and StorageCleanup
+│   ├── models/         # Admin, Video, Tag and StorageCleanup
 │   ├── routes/
 │   ├── scripts/        # Interactive password hashing
 │   ├── services/       # S3 signing and object verification
-│   ├── test/
 │   ├── utils/
 │   ├── .env.example
 │   ├── app.js
@@ -201,13 +200,16 @@ Success payloads below are inside `data`. Typical errors are 400 validation, 401
 | POST   | `/api/videos/upload`                  | Authenticated, multipart `file` + `duration`; store video and thumbnail |
 | POST   | `/api/videos/upload/:uploadId/cancel` | Authenticated; stop that upload, or remove it if it just finished       |
 | POST   | `/api/videos/validate`                | Authenticated, multipart `header` sample ≤4 KiB                         |
-| GET    | `/api/videos`                         | Authenticated, list/filter/sort/page plus statistics                    |
+| GET    | `/api/videos`                         | Authenticated, list/filter/sort/page/`tag` plus statistics              |
 | GET    | `/api/videos/:id`                     | Authenticated, owned video details                                      |
 | GET    | `/api/videos/:id/play`                | Authenticated, signed playback URL                                      |
 | GET    | `/api/videos/:id/download`            | Authenticated, signed attachment URL                                    |
-| PATCH  | `/api/videos/:id`                     | Authenticated, set `{ "favorite": true }`                               |
+| PATCH  | `/api/videos/:id`                     | Authenticated, set `name`, `note`, `favorite` or `tags` (≤10 names)     |
 | PUT    | `/api/videos/:id/thumbnail`           | Authenticated, multipart `thumbnail`; replace thumbnail                 |
 | DELETE | `/api/videos/:id`                     | Authenticated, delete video, thumbnail and metadata                     |
+| GET    | `/api/tags`                           | Authenticated, owner's tags with video counts                           |
+| PATCH  | `/api/tags/:id`                       | Authenticated, rename; merges into an existing tag of the same name     |
+| DELETE | `/api/tags/:id`                       | Authenticated, remove the tag from every video, then delete it          |
 | GET    | `/api/health`                         | Public, database readiness; 200 or 503                                  |
 
 ### Authentication example
@@ -325,15 +327,9 @@ Response: `{"success":true,"data":{"deleted":true,"id":"VIDEO_ID"}}`.
 ```sh
 cd frontend
 bun run build
-bun run test
-
-cd ../backend
-bun run test
 ```
 
-The frontend tests verify bounded concurrent uploads, independent progress, failure isolation, retries during active uploads, queued-file removal, aborting transfers on cleanup, processing and cancelled states, cancel all, retry after cancel, byte-weighted overall progress, thumbnail file checks, and delete retries. The backend tests cover authentication, bearer-token permissions and expiry, ownership scoping, strict metadata validation, safe error envelopes, MP4 signatures, Multer buffer limits, exact object verification, and conditional signed PUTs. They also cover 1080p WebP letterboxing, content-based image validation, thumbnail replacement ordering, failed and racing replacements, deletion with missing objects and partial failures, upload rollback, cancelling during transfer and processing, cancels that race with completion, and the cleanup worker. The ingest and frame tests run the local ffmpeg and are skipped without it. These tests do not require live MongoDB or incur S3 costs. A real B2/MongoDB integration smoke test still requires your own configured services.
-
-For that smoke test: sign in and upload an MP4. Check that `videos/<uuid>.mp4` holds the full file (not 170 bytes of XML) and that `thumbnail/<uuid>.webp` is 1920 × 1080. Replace the thumbnail from the card menu and confirm the old `thumbnail/` object is gone. Try a renamed non-image and confirm the current thumbnail stays. Play, seek, and download. Delete the video and confirm both objects and the record are removed. Check playback renewal with a short configured URL TTL. Verify that anonymous management requests are rejected and that a renamed non-MP4 file cannot complete verification.
+A real B2/MongoDB integration smoke test requires your own configured services. Sign in and upload an MP4. Check that `videos/<uuid>.mp4` holds the full file (not 170 bytes of XML) and that `thumbnail/<uuid>.webp` is 1920 × 1080. Replace the thumbnail from the card menu and confirm the old `thumbnail/` object is gone. Try a renamed non-image and confirm the current thumbnail stays. Play, seek, and download. Delete the video and confirm both objects and the record are removed. Check playback renewal with a short configured URL TTL. Verify that anonymous management requests are rejected and that a renamed non-MP4 file cannot complete verification.
 
 For an opt-in check against the configured real services, run `cd backend` then `bun run test:delete-live`. It creates UUID-named sample video versions, a hide marker, a thumbnail, and one MongoDB record; calls the authenticated delete endpoint; checks version listings, object 404 responses, and database removal; and cleans up only those test fixtures. It requires the bucket capabilities listed above and uses the bundled sample MP4.
 

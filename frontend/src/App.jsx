@@ -16,6 +16,7 @@ import { libraryQuery } from "./services/libraryQuery";
 import { Brand, Header, Sidebar } from "./components/Navbar";
 import VideoUpload from "./components/VideoUpload";
 import Dashboard from "./pages/Dashboard";
+import Tags from "./pages/Tags";
 import Login from "./pages/Login";
 import Upload from "./pages/Upload";
 import ChangePassword from "./pages/ChangePassword";
@@ -137,6 +138,7 @@ function Workspace({ dark, onTheme, onSignedOut }) {
         <main className="main-content" id="main-content" tabIndex={-1}>
           <Routes>
             <Route path="/upload" element={<Upload />} />
+            <Route path="/tags" element={<Tags />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route
               path="*"

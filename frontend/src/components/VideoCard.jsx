@@ -12,6 +12,7 @@ import {
   Play,
   Shield,
   Star,
+  Tags,
   Trash2,
 } from "lucide-react";
 import { api, formatBytes, formatDate, formatDuration } from "../services/api";
@@ -102,6 +103,8 @@ export default function VideoCard({
   onThumbnail,
   onRename,
   onNote,
+  onTags,
+  onTagClick,
   selected,
   onSelect,
   view,
@@ -121,6 +124,11 @@ export default function VideoCard({
     },
     { icon: Pencil, label: "Rename video", action: onRename },
     { icon: NotebookPen, label: video.note ? "Edit note" : "Add note", action: onNote },
+    {
+      icon: Tags,
+      label: video.tags?.length > 0 ? `Edit tags (${video.tags.length})` : "Add tags",
+      action: onTags,
+    },
     {
       icon: Star,
       label: video.favorite ? "Remove from favorites" : "Add to favorites",
@@ -247,6 +255,29 @@ export default function VideoCard({
             <NotebookPen size={14} />
             <span>{video.note}</span>
           </button>
+        )}
+        {video.tags?.length > 0 && (
+          <div className="video-tag-row" aria-label={`Tags for ${video.name}`}>
+            {video.tags.slice(0, 4).map((tag) => (
+              <button
+                key={tag.id || tag.name}
+                className="tag-chip tag-chip-static"
+                onClick={() => onTagClick?.(tag, video)}
+                title={`Filter by ${tag.name}`}
+              >
+                {tag.name}
+              </button>
+            ))}
+            {video.tags.length > 4 && (
+              <button
+                className="tag-chip tag-chip-more"
+                onClick={() => onTags(video)}
+                title="Edit tags"
+              >
+                +{video.tags.length - 4}
+              </button>
+            )}
+          </div>
         )}
         <div className="video-card-footer">
           <span>

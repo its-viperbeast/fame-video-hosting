@@ -11,6 +11,7 @@ import {
   Moon,
   ShieldCheck,
   Sun,
+  Tags,
   X,
 } from "lucide-react";
 import { formatBytes } from "../services/api";
@@ -49,6 +50,7 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
   const links = [
     { to: "/", icon: LayoutGrid, label: "Overview" },
     { to: "/videos", icon: FolderOpen, label: "All videos", count: stats.total },
+    { to: "/tags", icon: Tags, label: "Tags" },
     { to: "/upload", icon: CloudUpload, label: "Upload videos" },
     { to: "/change-password", icon: KeyRound, label: "Change password" },
   ];
@@ -123,6 +125,7 @@ export function Sidebar({ stats, open, onClose, onLogout, dark, onTheme }) {
 
 const pageTitles = {
   "/videos": "All videos",
+  "/tags": "Tags",
   "/upload": "Upload videos",
   "/change-password": "Change password",
 };

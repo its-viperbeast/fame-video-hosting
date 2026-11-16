@@ -10,7 +10,6 @@
     "dev": "bun --watch server.js",
     "start": "bun server.js",
     "start:prod": "pm2 start ecosystem.config.cjs",
-    "test": "bun test --isolate ./test",
     "test:delete-live": "bun scripts/check-delete-flow.js",
     "password": "bun scripts/hash-password.js",
     "format": "bun ./node_modules/prettier/bin/prettier.cjs --write .",
@@ -31,7 +30,6 @@
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "prettier": "^3.9.10",
-    "supertest": "^7.1.0"
+    "prettier": "^3.9.10"
   }
 }

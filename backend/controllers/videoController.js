@@ -3,8 +3,16 @@ import path from "node:path";
 import { rm, stat } from "node:fs/promises";
 import { z } from "zod";
 import Video from "../models/Video.js";
+import Tag, { tagKey } from "../models/Tag.js";
 import { env } from "../config/env.js";
-import { fileSchema, objectId, escapeRegex, assertMp4 } from "../utils/validation.js";
+import {
+  fileSchema,
+  objectId,
+  tagIdQuery,
+  tagNameInput,
+  escapeRegex,
+  assertMp4,
+} from "../utils/validation.js";
 import { HttpError, ok } from "../utils/http.js";
 import { assertFileMp4, remux } from "../services/ffmpegService.js";
 import {
@@ -34,10 +42,27 @@ async function ownedVideo(req) {
 }
 
 // Object keys stay on the server; the client only gets a thumbnail URL.
+// Populated tags serialize as { id, name }; unpopulated ids are dropped.
 async function present(video) {
   const json = video.toJSON();
   if (video.thumbnailKey) json.thumbnailUrl = await storage.thumbnailUrl(video.thumbnailKey);
+  json.tags = (json.tags || []).filter((tag) => tag?.name);
   return json;
+}
+
+// Names typed in the UI may not exist yet: dedupe case-insensitively and
+// create the missing ones for this owner, then return their ids.
+async function resolveTagIds(owner, names) {
+  const ids = [];
+  for (const [nameKey, name] of new Map(names.map((name) => [tagKey(name), name]))) {
+    const tag = await Tag.findOneAndUpdate(
+      { owner, nameKey },
+      { $setOnInsert: { owner, name, nameKey } },
+      { new: true, upsert: true },
+    );
+    ids.push(tag._id);
+  }
+  return ids;
 }
 
 // Runs before Multer, so a cancel stops the transfer as well as processing.
@@ -173,12 +198,14 @@ export async function list(req, res) {
       page: z.coerce.number().int().min(1).max(100000).default(1),
       limit: z.coerce.number().int().min(1).max(48).default(6),
       filter: z.enum(["all", "favorites"]).default("all"),
+      tag: tagIdQuery,
     })
     .parse(req.query);
   const base = { owner: req.user.id, status: "ready" },
     query = { ...base };
   if (q.search) query.name = { $regex: escapeRegex(q.search), $options: "i" };
   if (q.filter === "favorites") query.favorite = true;
+  if (q.tag) query.tags = q.tag;
   const sorts = {
     newest: { createdAt: -1, _id: -1 },
     oldest: { createdAt: 1, _id: 1 },
@@ -188,6 +215,7 @@ export async function list(req, res) {
   const [videos, total, aggregate, favorites, recent] = await Promise.all([
     Video.find(query)
       .select("+thumbnailKey")
+      .populate("tags", "name")
       .sort(sorts[q.sort])
       .skip((q.page - 1) * q.limit)
       .limit(q.limit),
@@ -214,7 +242,9 @@ export async function list(req, res) {
 }
 
 export async function details(req, res) {
-  ok(res, { video: await present(await ownedVideo(req)) });
+  const video = await ownedVideo(req);
+  await video.populate("tags", "name");
+  ok(res, { video: await present(video) });
 }
 
 export async function play(req, res) {
@@ -238,16 +268,23 @@ export async function update(req, res) {
         .optional(),
       note: z.string().trim().max(5000).optional(),
       favorite: z.boolean().optional(),
+      tags: z.array(tagNameInput).max(10).optional(),
     })
     .strict()
     .refine((value) => Object.keys(value).length > 0, "Choose a field to update")
     .parse(req.body);
   // Only metadata changes here; storage keys and objects stay untouched.
+  // Tag names are resolved first so names missing from the DB are created.
+  const { tags, ...rest } = input;
+  const set = { ...rest };
+  if (tags !== undefined) set.tags = await resolveTagIds(req.user.id, tags);
   const video = await Video.findOneAndUpdate(
     { _id: req.params.id, owner: req.user.id, status: "ready" },
-    { $set: input },
+    { $set: set },
     { new: true, runValidators: true },
-  ).select("+thumbnailKey");
+  )
+    .select("+thumbnailKey")
+    .populate("tags", "name");
   if (!video) throw notFound();
   ok(res, { video: await present(video) });
 }
@@ -279,7 +316,9 @@ export async function replaceThumbnail(req, res) {
       { _id: video._id, owner: req.user.id, status: "ready", thumbnailKey: previous ?? null },
       { $set: { thumbnailKey: key } },
       { new: true },
-    ).select("+thumbnailKey");
+    )
+      .select("+thumbnailKey")
+      .populate("tags", "name");
   } finally {
     // After a successful swap, this deletes the previous thumbnail. After a
     // failure, it deletes the new one and keeps the current thumbnail.

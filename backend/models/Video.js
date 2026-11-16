@@ -11,6 +11,7 @@ const schema = new mongoose.Schema(
     mimeType: { type: String, default: "video/mp4" },
     duration: { type: Number, default: 0 },
     favorite: { type: Boolean, default: false },
+    tags: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tag", default: [] }],
     status: { type: String, enum: ["ready", "deleting"], default: "ready" },
   },
   {
@@ -31,6 +32,7 @@ const schema = new mongoose.Schema(
     },
   },
 );
+schema.index({ owner: 1, tags: 1 });
 schema.index({ owner: 1, createdAt: -1, _id: -1 });
 schema.index({ status: 1, updatedAt: 1 });
 export default mongoose.model("Video", schema);
