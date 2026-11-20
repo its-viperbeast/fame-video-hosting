@@ -3,7 +3,7 @@ import { HttpError } from "./http.js";
 import { normalizeTagName } from "../models/Tag.js";
 import { normalizeVideoName } from "./videoName.js";
 
-export const fileSchema = (max) =>
+export const fileSchema = (max: number) =>
   z
     .object({
       name: z.preprocess(
@@ -55,7 +55,7 @@ const mp4Brands = new Set([
   "MSNV",
 ]);
 
-export function validateMp4Header(bytes) {
+export function validateMp4Header(bytes: Uint8Array) {
   const data = Buffer.from(bytes);
   if (data.length < 16 || data.toString("ascii", 4, 8) !== "ftyp") return false;
   const boxSize = data.readUInt32BE(0);
@@ -66,11 +66,11 @@ export function validateMp4Header(bytes) {
   return false;
 }
 
-export function assertMp4(bytes) {
+export function assertMp4(bytes: Uint8Array) {
   if (!validateMp4Header(bytes))
     throw new HttpError(415, "The file is not a supported MP4 video.", "INVALID_VIDEO");
 }
 
-export function escapeRegex(value) {
+export function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

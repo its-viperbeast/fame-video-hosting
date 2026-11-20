@@ -9,14 +9,16 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "../config/aws.js";
 import { env } from "../config/env.js";
-import { HttpError } from "../utils/http.js";
+import { asError, HttpError } from "../utils/http.js";
 
-const base = (key) => ({ Bucket: env.AWS_S3_BUCKET, Key: key });
+const base = (key: string) => ({ Bucket: env.AWS_S3_BUCKET, Key: key });
 
-const sign = (command, options = {}) =>
-  getSignedUrl(s3, command, { expiresIn: env.PRESIGNED_URL_TTL_SECONDS, ...options });
+const sign = (
+  command: GetObjectCommand,
+  options: { expiresIn?: number; signingDate?: Date } = {},
+) => getSignedUrl(s3, command, { expiresIn: env.PRESIGNED_URL_TTL_SECONDS, ...options });
 
-export async function putFile(key, filePath, size, signal) {
+export async function putFile(key: string, filePath: string, size: number, signal?: AbortSignal) {
   const body = createReadStream(filePath);
   try {
     // B2 rejects the tagging and If-None-Match headers on PutObject.
@@ -35,7 +37,7 @@ export async function putFile(key, filePath, size, signal) {
   }
 }
 
-export async function putThumbnail(key, body, signal) {
+export async function putThumbnail(key: string, body: Buffer, signal?: AbortSignal) {
   await s3.send(
     new PutObjectCommand({
       ...base(key),
@@ -54,10 +56,11 @@ export async function putThumbnail(key, body, signal) {
 // No object tagging: B2 ignores the ?tagging subresource and treats
 // PutObjectTagging as PutObject, replacing the video with the tag XML.
 // Orphans are tracked in MongoDB instead (see cleanupService).
-async function objectVersions(key) {
-  const versions = [],
-    markers = [];
-  let KeyMarker, VersionIdMarker;
+async function objectVersions(key: string) {
+  const versions: string[] = [];
+  const markers: string[] = [];
+  let KeyMarker: string | undefined;
+  let VersionIdMarker: string | undefined;
   for (;;) {
     const page = await s3.send(
       new ListObjectVersionsCommand({
@@ -71,7 +74,7 @@ async function objectVersions(key) {
     for (const [entries, target] of [
       [page.Versions, versions],
       [page.DeleteMarkers, markers],
-    ]) {
+    ] as const) {
       for (const entry of entries || []) {
         if (entry.Key !== key) continue;
         if (!entry.VersionId)
@@ -95,7 +98,7 @@ async function objectVersions(key) {
 }
 
 // An object that is already gone counts as deleted, so retries can finish.
-export async function deleteObject(key) {
+export async function deleteObject(key: string) {
   const { versions, markers } = await objectVersions(key);
   // B2's name-only DELETE just hides a file. Explicit versions free the storage.
   // Leave hide markers until all file versions are gone to avoid uncovering old data.
@@ -103,7 +106,7 @@ export async function deleteObject(key) {
     try {
       await s3.send(new DeleteObjectCommand({ ...base(key), VersionId }));
     } catch (error) {
-      if (!["NoSuchKey", "NoSuchVersion"].includes(error.name)) throw error;
+      if (!["NoSuchKey", "NoSuchVersion"].includes(asError(error).name)) throw error;
     }
   }
   const remaining = await objectVersions(key);
@@ -119,10 +122,10 @@ export async function deleteObject(key) {
 // (Cloudflare in front of the bucket) as <origin>/<object key>. Those links are
 // public and never expire. Downloads stay signed so the response can carry
 // Content-Disposition with the video's name.
-const mediaUrl = (key) =>
+const mediaUrl = (key: string) =>
   `${env.MEDIA_BASE_URL}/${key.split("/").map(encodeURIComponent).join("/")}`;
 
-export async function playbackUrl(video, download = false) {
+export async function playbackUrl(video: { key: string; name: string }, download = false) {
   if (env.MEDIA_BASE_URL && !download) return { url: mediaUrl(video.key) };
   // RFC 5987 filename*; encodeURIComponent leaves ' ( ) * unescaped.
   const fileName = encodeURIComponent(video.name).replace(
@@ -148,7 +151,7 @@ export async function playbackUrl(video, download = false) {
 // Signing from the start of a half-TTL window keeps the URL stable across list
 // requests, so the browser reuses its cached image. Each replacement has a new
 // key, which changes the URL, so a cached thumbnail is never stale.
-export async function thumbnailUrl(key) {
+export async function thumbnailUrl(key: string) {
   if (env.MEDIA_BASE_URL) return mediaUrl(key);
   const ttl = env.PRESIGNED_URL_TTL_SECONDS;
   const window = Math.floor(ttl / 2) * 1000;

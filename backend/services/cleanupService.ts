@@ -3,6 +3,7 @@ import path from "node:path";
 import Video from "../models/Video.js";
 import StorageCleanup from "../models/StorageCleanup.js";
 import * as storage from "./s3Service.js";
+import { asError } from "../utils/http.js";
 
 // Objects being uploaded are left alone this long, even after a crash.
 const IN_FLIGHT_MS = 24 * 3600000;
@@ -11,12 +12,14 @@ const RETRY_MS = 5 * 60000;
 const STUCK_DELETE_MS = 10 * 60000;
 const TEMP_FILE_MS = 24 * 3600000;
 
-const log = (scope, error) =>
-  console.error({ cleanup: scope, code: error.name, message: error.message });
+const log = (scope: string, error: unknown) => {
+  const { name, message } = asError(error);
+  console.error({ cleanup: scope, code: name, message });
+};
 
 // Keys are recorded before any write, so a crash, abandoned request, or failed
 // database update cannot leave an object that nothing knows about.
-export async function track(keys, owner, delay = IN_FLIGHT_MS) {
+export async function track(keys: string[], owner: string, delay = IN_FLIGHT_MS) {
   if (!keys.length) return;
   const deleteAfter = new Date(Date.now() + delay);
   await StorageCleanup.bulkWrite(
@@ -29,7 +32,7 @@ export async function track(keys, owner, delay = IN_FLIGHT_MS) {
 // Deletes each tracked object that no ready video references, then stops
 // tracking it. Referenced objects are only untracked. Failures stay tracked and
 // the worker retries them. Returns the keys that could not be settled.
-export async function reconcile(keys) {
+export async function reconcile(keys: string[]) {
   const failed = [];
   for (const key of keys) {
     try {
@@ -48,25 +51,38 @@ export async function reconcile(keys) {
   return failed;
 }
 
+type DestroyableVideo = {
+  _id: unknown;
+  owner: string;
+  key?: string | null;
+  thumbnailKey?: string | null;
+};
+
 // The record must already be marked deleting. Both objects are attempted, and
 // the record is removed only once neither remains, so a retry finishes the job.
-export async function destroyVideo(video) {
+export async function destroyVideo(video: DestroyableVideo) {
   const results = await Promise.allSettled(
-    [video.key, video.thumbnailKey].filter(Boolean).map((key) => storage.deleteObject(key)),
+    [video.key, video.thumbnailKey]
+      .filter((key): key is string => Boolean(key))
+      .map((key) => storage.deleteObject(key)),
   );
   const failure = results.find((result) => result.status === "rejected");
   if (failure) throw failure.reason;
   await Video.deleteOne({ _id: video._id, owner: video.owner, status: "deleting" });
 }
 
-export async function sweep({ tempDir, now = Date.now() } = {}) {
+export async function sweep({
+  tempDir,
+  now = Date.now(),
+}: { tempDir?: string; now?: number } = {}) {
   const stuck = await Video.find({
     status: "deleting",
     updatedAt: { $lt: new Date(now - STUCK_DELETE_MS) },
   })
     .select("+key +thumbnailKey")
     .limit(100);
-  for (const video of stuck) await destroyVideo(video).catch((error) => log(video.id, error));
+  for (const video of stuck)
+    await destroyVideo(video).catch((error) => log(String(video._id), error));
   for (let i = 0; i < 100; i++) {
     // Claiming pushes deleteAfter forward, so parallel workers skip this entry.
     const entry = await StorageCleanup.findOneAndUpdate(
@@ -86,7 +102,7 @@ export async function sweep({ tempDir, now = Date.now() } = {}) {
   }
 }
 
-export function startCleanupWorker(options, intervalMs = 5 * 60000) {
+export function startCleanupWorker(options: { tempDir?: string }, intervalMs = 5 * 60000) {
   let running = false;
   const tick = async () => {
     if (running) return;

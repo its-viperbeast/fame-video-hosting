@@ -4,7 +4,7 @@
 const BROKEN =
   /[\u00C2\u00C3\u00E2\uFFFD](?:[\u0080-\u00A9\u00AB-\u00B4\u00B6-\u00B9\u00BB-\u00BF\u0152\u0153\u0160\u0161\u0178\u017D\u017E\u0192\u02C6\u02DC\u2013\u2014\u2018-\u201E\u2020-\u2022\u2026\u2030\u2039\u203A\u20AC\u2122"'`])*/gu;
 
-export function normalizeVideoName(raw) {
+export function normalizeVideoName(raw: unknown) {
   const original = String(raw ?? "")
     .replace(/\u00A0/g, " ")
     .trim();

@@ -10,8 +10,8 @@ const schema = new mongoose.Schema(
     timestamps: true,
     versionKey: false,
     toJSON: {
-      transform(_doc, ret) {
-        ret.id = ret._id.toString();
+      transform(_doc, ret: Record<string, unknown>) {
+        ret.id = String(ret._id);
         delete ret._id;
         delete ret.owner;
         delete ret.nameKey;
@@ -27,13 +27,13 @@ const schema = new mongoose.Schema(
 schema.index({ owner: 1, nameKey: 1 }, { unique: true });
 schema.index({ owner: 1, name: 1 });
 
-export function normalizeTagName(value) {
+export function normalizeTagName(value: unknown) {
   return String(value || "")
     .trim()
     .replace(/\s+/g, " ");
 }
 
-export function tagKey(value) {
+export function tagKey(value: unknown) {
   return normalizeTagName(value).toLowerCase();
 }
 

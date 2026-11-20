@@ -74,6 +74,8 @@ Use the output for `SESSION_SECRET`. Then:
 bun run dev
 # Production process:
 bun run start
+# Typecheck:
+bun run typecheck
 ```
 
 The API listens on http://localhost:9090 and starts only after a successful MongoDB connection. Missing or invalid required configuration fails startup instead of silently opening an insecure service.
@@ -148,8 +150,8 @@ shubh-stream/
 │   ├── services/       # S3 signing and object verification
 │   ├── utils/
 │   ├── .env.example
-│   ├── app.js
-│   ├── server.js
+│   ├── app.ts
+│   ├── server.ts
 │   └── package.json
 └── README.md
 ```

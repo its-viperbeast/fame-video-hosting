@@ -7,12 +7,13 @@
     "bun": ">=1.2.0"
   },
   "scripts": {
-    "dev": "bun --watch server.js",
-    "start": "bun server.js",
+    "dev": "bun --watch server.ts",
+    "start": "bun server.ts",
     "start:prod": "pm2 start ecosystem.config.cjs",
-    "test:delete-live": "bun scripts/check-delete-flow.js",
-    "password": "bun scripts/hash-password.js",
-    "normalize-names": "bun scripts/normalize-video-names.js",
+    "typecheck": "tsc --noEmit",
+    "test:delete-live": "bun scripts/check-delete-flow.ts",
+    "password": "bun scripts/hash-password.ts",
+    "normalize-names": "bun scripts/normalize-video-names.ts",
     "format": "bun ./node_modules/prettier/bin/prettier.cjs --write .",
     "format:check": "bun ./node_modules/prettier/bin/prettier.cjs --check ."
   },
@@ -31,6 +32,12 @@
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "prettier": "^3.9.10"
+    "@types/bun": "^1.4.4",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.3.0",
+    "prettier": "^3.9.10",
+    "typescript": "^7.0.2"
   }
 }

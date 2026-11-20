@@ -46,7 +46,9 @@ const schema = z.object({
     ),
 });
 
-export function parseEnv(input) {
+export type Env = z.infer<typeof schema>;
+
+export function parseEnv(input: NodeJS.ProcessEnv): Env {
   const value = schema.parse({
     ...input,
     MEDIA_BASE_URL: input.MEDIA_BASE_URL || undefined,

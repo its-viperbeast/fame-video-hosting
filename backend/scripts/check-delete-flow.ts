@@ -2,18 +2,29 @@
 import { randomUUID } from "node:crypto";
 import { stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import type { Server } from "node:http";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import sharp from "sharp";
+import { asError } from "../utils/http.js";
 import {
   DeleteObjectCommand,
   HeadObjectCommand,
   ListObjectVersionsCommand,
 } from "@aws-sdk/client-s3";
+let server: Server | undefined;
+let cleanup: typeof import("../services/cleanupService.js") | undefined;
+let Video: typeof import("../models/Video.js").default | undefined;
+let fixtureId: mongoose.Types.ObjectId | undefined;
+const keys: string[] = [];
 
-let server, cleanup, Video, fixtureId;
-const keys = [];
+function describe(error: unknown) {
+  const { name } = asError(error);
+  const code = (error as { code?: unknown } | null)?.code;
+  return `${name}, ${code ?? "no code"}`;
+}
+
 try {
   const { env } = await import("../config/env.js");
   const { app } = await import("../app.js");
@@ -26,7 +37,7 @@ try {
   await ensureAdmin();
   const key = `videos/${randomUUID()}.mp4`;
   const thumbnailKey = `thumbnail/${randomUUID()}.webp`;
-  const versions = async (Key) => {
+  const versions = async (Key: string) => {
     const result = await s3.send(
       new ListObjectVersionsCommand({ Bucket: env.AWS_S3_BUCKET, Prefix: Key }),
     );
@@ -62,11 +73,13 @@ try {
     thumbnailKey,
     size,
   });
-  assert.equal((await Video.collection.findOne({ _id: fixtureId })).__v, undefined);
+  const stored = await Video.collection.findOne({ _id: fixtureId });
+  assert.ok(stored);
+  assert.equal(stored.__v, undefined);
   server = app.listen(0, "127.0.0.1");
-  await new Promise((resolve, reject) => {
-    server.once("listening", resolve);
-    server.once("error", reject);
+  await new Promise<void>((resolve, reject) => {
+    server!.once("listening", () => resolve());
+    server!.once("error", reject);
   });
   const token = jwt.sign({ role: "admin" }, env.SESSION_SECRET, {
     subject: env.AUTH_EMAIL,
@@ -74,12 +87,17 @@ try {
     issuer: "frame",
     expiresIn: "1m",
   });
-  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/videos/${video.id}`, {
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Expected a TCP port");
+  const response = await fetch(`http://127.0.0.1:${address.port}/api/videos/${video.id}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(60000),
   });
-  const body = await response.json();
+  const body = (await response.json()) as {
+    error?: { code?: string };
+    data: { deleted: boolean };
+  };
   assert.equal(
     response.status,
     200,
@@ -90,7 +108,8 @@ try {
     assert.equal((await versions(Key)).length, 0, "A stored version or delete marker remains");
     await assert.rejects(
       s3.send(new HeadObjectCommand({ Bucket: env.AWS_S3_BUCKET, Key })),
-      (error) => error.$metadata?.httpStatusCode === 404,
+      (error: { $metadata?: { httpStatusCode?: number } }) =>
+        error.$metadata?.httpStatusCode === 404,
     );
   }
   assert.equal(await Video.exists({ _id: fixtureId }), null);
@@ -98,11 +117,11 @@ try {
     "PASS: delete endpoint removed every video/thumbnail version and marker, both objects return 404, and the MongoDB record is gone.",
   );
 } catch (error) {
-  console.error(`Live delete check failed (${error.name}, ${error.code || "no code"}).`);
+  console.error(`Live delete check failed (${describe(error)}).`);
   process.exitCode = 1;
 } finally {
-  if (server) await new Promise((resolve) => server.close(resolve));
-  if (mongoose.connection.readyState === 1 && cleanup) {
+  if (server) await new Promise<void>((resolve) => server!.close(() => resolve()));
+  if (mongoose.connection.readyState === 1 && cleanup && Video) {
     try {
       if (fixtureId) {
         const remaining = await Video.findOneAndUpdate(
@@ -116,7 +135,9 @@ try {
       if (failed.length) throw new Error("Fixture cleanup incomplete");
       console.info("Verification fixture cleanup complete.");
     } catch (error) {
-      console.error(`Fixture cleanup pending (${error.name}); the cleanup worker will retry.`);
+      console.error(
+        `Fixture cleanup pending (${asError(error).name}); the cleanup worker will retry.`,
+      );
       process.exitCode = 1;
     }
   }

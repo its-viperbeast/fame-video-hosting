@@ -6,7 +6,7 @@ import { Router } from "express";
 import multer from "multer";
 import { env } from "../config/env.js";
 import { requireAuth } from "../middleware/auth.js";
-import { HttpError, wrap } from "../utils/http.js";
+import { asError, HttpError, wrap } from "../utils/http.js";
 import * as videos from "../controllers/videoController.js";
 
 const router = Router();
@@ -46,7 +46,7 @@ const videoUpload = multer({
         ensureUploadDir();
         cb(null, uploadDir);
       } catch (error) {
-        cb(error);
+        cb(asError(error), uploadDir);
       }
     },
     filename: (_req, _file, cb) => cb(null, `${randomUUID()}.mp4`),
@@ -66,7 +66,7 @@ const videoUpload = multer({
     cb(null, true);
   },
 });
-router.post("/upload", videos.trackUpload, videoUpload.single("file"), wrap(videos.ingest));
+router.post("/upload", wrap(videos.trackUpload), videoUpload.single("file"), wrap(videos.ingest));
 router.post("/upload/:uploadId/cancel", wrap(videos.cancelUpload));
 router.post("/validate", headerUpload.single("header"), wrap(videos.validateHeader));
 router.get("/", wrap(videos.list));

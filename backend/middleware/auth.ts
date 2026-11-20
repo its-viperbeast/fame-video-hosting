@@ -1,31 +1,39 @@
+import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { timingSafeEqual, scryptSync } from "node:crypto";
 import { env } from "../config/env.js";
 import Admin from "../models/Admin.js";
 import { HttpError } from "../utils/http.js";
 
-export function verifyPassword(password, hash) {
+export type SessionClaims = jwt.JwtPayload & {
+  role?: string;
+  sessionVersion?: number;
+};
+
+export function verifyPassword(password: string, hash: string) {
   const [salt, expected] = String(hash).split(":");
   const expectedBuffer = Buffer.from(expected || "", "hex");
   if (!salt || expectedBuffer.length !== 64) return false;
   return timingSafeEqual(scryptSync(password, salt, 64), expectedBuffer);
 }
 
-function bearerToken(req) {
+function bearerToken(req: Request) {
   const [scheme, token] = (req.get("authorization") || "").split(" ");
   return scheme === "Bearer" && token ? token : "";
 }
 
 const unauthorized = () => new HttpError(401, "Please sign in to continue.", "UNAUTHORIZED");
 
-export async function requireAuth(req, _res, next) {
-  let user;
+export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
+  let user: SessionClaims;
   try {
-    user = jwt.verify(bearerToken(req), env.SESSION_SECRET, {
+    const decoded = jwt.verify(bearerToken(req), env.SESSION_SECRET, {
       algorithms: ["HS256"],
       audience: "frame-api",
       issuer: "frame",
     });
+    if (typeof decoded === "string") return next(unauthorized());
+    user = decoded;
   } catch {
     return next(unauthorized());
   }

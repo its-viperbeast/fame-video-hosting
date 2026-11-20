@@ -1,6 +1,6 @@
 // +faststart rewrites the moov atom, so both ends must be seekable files.
 // pipe:0 and pipe:1 stay in FFMPEG_ARGS and are replaced with those files here.
-export function resolveFfmpegArgs(template, inputPath, outputPath) {
+export function resolveFfmpegArgs(template: string, inputPath: string, outputPath: string) {
   const args = template
     .trim()
     .split(/\s+/)

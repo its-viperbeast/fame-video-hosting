@@ -9,7 +9,7 @@ module.exports = {
     {
       name: "frame-backend",
       cwd: __dirname,
-      script: "server.js",
+      script: "server.ts",
       interpreter: "bun",
       exec_mode: "fork",
       instances: 1,

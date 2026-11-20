@@ -1,8 +1,9 @@
+import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 import { env } from "../config/env.js";
 import { HttpError } from "../utils/http.js";
 
-export function errorHandler(err, req, res, _next) {
+export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   let status = err.status || 500,
     message = err.message,
     code = err.code || "INTERNAL_ERROR";
@@ -53,4 +54,4 @@ export function errorHandler(err, req, res, _next) {
     return;
   }
   res.status(status).json({ success: false, error: { code, message } });
-}
+};

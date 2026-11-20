@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
+import sharp, { type Sharp } from "sharp";
 import { extractFrame } from "./ffmpegService.js";
 import { HttpError } from "../utils/http.js";
 
@@ -15,7 +15,7 @@ export const thumbnailKey = () => `thumbnail/${randomUUID()}.webp`;
 
 // Letterboxing keeps every aspect ratio intact inside the 1920x1080 frame.
 // rotate() applies EXIF orientation; metadata such as GPS is not copied.
-const encode = (image) =>
+const encode = (image: Sharp) =>
   image
     .rotate()
     .resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, { fit: "contain", background: "#000" })
@@ -27,7 +27,7 @@ const invalidImage = () =>
   new HttpError(415, "Choose a JPEG, PNG, or WebP image.", "INVALID_IMAGE");
 
 // The format comes from the decoded bytes, never the filename or browser MIME type.
-export async function processThumbnailImage(buffer) {
+export async function processThumbnailImage(buffer: Buffer) {
   const image = sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS });
   let info;
   try {
@@ -35,7 +35,8 @@ export async function processThumbnailImage(buffer) {
   } catch {
     throw invalidImage();
   }
-  if (!formats.has(info.format)) throw invalidImage();
+  if (!info.format || !formats.has(info.format)) throw invalidImage();
+  if (!info.width || !info.height) throw invalidImage();
   if (info.width * info.height > MAX_IMAGE_PIXELS)
     throw new HttpError(
       413,
@@ -59,7 +60,7 @@ export async function processThumbnailImage(buffer) {
   }
 }
 
-export async function videoThumbnail(videoPath, duration, signal) {
+export async function videoThumbnail(videoPath: string, duration: number, signal?: AbortSignal) {
   const framePath = path.join(path.dirname(videoPath), `${randomUUID()}.png`);
   try {
     // A frame a little way in avoids black leaders. Short clips use the first frame.

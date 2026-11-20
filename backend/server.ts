@@ -21,7 +21,7 @@ async function main() {
   server.requestTimeout = 0;
   server.headersTimeout = 60_000;
   server.timeout = 0;
-  for (const signal of ["SIGINT", "SIGTERM"])
+  for (const signal of ["SIGINT", "SIGTERM"] as const)
     process.on(signal, () => {
       stopCleanup();
       server.close(async () => {

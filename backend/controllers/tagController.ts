@@ -1,24 +1,25 @@
+import type { Response } from "express";
 import { z } from "zod";
 import Tag, { tagKey } from "../models/Tag.js";
 import Video from "../models/Video.js";
 import { objectId, tagNameInput } from "../utils/validation.js";
-import { HttpError, ok } from "../utils/http.js";
+import { HttpError, ok, type AuthedRequest } from "../utils/http.js";
 
 const notFound = () => new HttpError(404, "Tag not found.", "NOT_FOUND");
 
-async function ownedTag(req) {
+async function ownedTag(req: AuthedRequest) {
   objectId.parse(req.params.id);
   const tag = await Tag.findOne({ _id: req.params.id, owner: req.user.id });
   if (!tag) throw notFound();
   return tag;
 }
 
-export async function list(req, res) {
+export async function list(req: AuthedRequest, res: Response) {
   const tags = await Tag.find({ owner: req.user.id }).sort({ name: 1, _id: 1 }).lean();
   const counts =
     tags.length === 0
       ? []
-      : await Video.aggregate([
+      : await Video.aggregate<{ _id: unknown; count: number }>([
           {
             $match: { owner: req.user.id, status: "ready", tags: { $in: tags.map((t) => t._id) } },
           },
@@ -35,7 +36,7 @@ export async function list(req, res) {
   });
 }
 
-export async function rename(req, res) {
+export async function rename(req: AuthedRequest, res: Response) {
   const tag = await ownedTag(req);
   const { name } = z.object({ name: tagNameInput }).strict().parse(req.body);
   const key = tagKey(name);
@@ -57,7 +58,7 @@ export async function rename(req, res) {
   ok(res, { tag: tag.toJSON(), merged: false });
 }
 
-export async function remove(req, res) {
+export async function remove(req: AuthedRequest, res: Response) {
   const tag = await ownedTag(req);
   await Video.updateMany({ owner: req.user.id, tags: tag._id }, { $pull: { tags: tag._id } });
   await Tag.deleteOne({ _id: tag._id });

@@ -7,9 +7,9 @@ import { env } from "../config/env.js";
 import Admin from "../models/Admin.js";
 import { requireAuth, verifyPassword } from "../middleware/auth.js";
 import { publicAdmin } from "../services/adminService.js";
-import { ok, wrap, HttpError } from "../utils/http.js";
+import { ok, wrap, HttpError, type AuthedRequest } from "../utils/http.js";
 
-const attemptLimit = (message) =>
+const attemptLimit = (message: string) =>
   rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 10,
@@ -18,7 +18,7 @@ const attemptLimit = (message) =>
     message: { success: false, error: { code: "RATE_LIMITED", message } },
   });
 
-const signToken = (admin) =>
+const signToken = (admin: { email: string; role: string; sessionVersion?: number | null }) =>
   jwt.sign({ role: admin.role, sessionVersion: admin.sessionVersion ?? 0 }, env.SESSION_SECRET, {
     subject: admin.email,
     expiresIn: "8h",
@@ -30,7 +30,7 @@ const signToken = (admin) =>
 const PIN_FAILURE_LIMIT = 5;
 const PIN_PAUSE_MS = 30_000;
 // shortcut: failed attempts live in this process, share them when more than one API process runs.
-const pinAttempts = new Map();
+const pinAttempts = new Map<string, { failures: number; pausedUntil: number }>();
 
 const router = Router();
 router.post(
@@ -41,16 +41,20 @@ router.post(
       .object({ email: z.email().max(254), password: z.string().min(1).max(256) })
       .parse(req.body);
     const admin = await Admin.findOne({ email: input.email.toLowerCase() }).select("+passwordHash");
-    if (!admin || !verifyPassword(input.password, admin.passwordHash))
+    if (!admin?.passwordHash || !verifyPassword(input.password, admin.passwordHash))
       throw new HttpError(401, "Email or password is incorrect.", "INVALID_CREDENTIALS");
     ok(res, { user: publicAdmin(admin), token: signToken(admin) });
   }),
 );
-router.get("/me", requireAuth, (req, res) => ok(res, { user: publicAdmin(req.user) }));
+router.get(
+  "/me",
+  requireAuth,
+  wrap((req: AuthedRequest, res) => ok(res, { user: publicAdmin(req.user) })),
+);
 router.post(
   "/lock/verify",
   requireAuth,
-  wrap(async (req, res) => {
+  wrap(async (req: AuthedRequest, res) => {
     if (!env.ADMIN_LOCK_PIN)
       throw new HttpError(503, "Screen lock is not configured.", "LOCK_NOT_CONFIGURED");
     const pin = req.body?.pin;
@@ -89,7 +93,7 @@ router.post(
   "/change-password",
   attemptLimit("Too many password attempts. Try again in 15 minutes."),
   requireAuth,
-  wrap(async (req, res) => {
+  wrap(async (req: AuthedRequest, res) => {
     const input = z
       .object({
         currentPassword: z.string().min(1).max(256),
@@ -97,7 +101,7 @@ router.post(
       })
       .parse(req.body);
     const admin = await Admin.findOne({ email: req.user.email }).select("+passwordHash");
-    if (!admin || !verifyPassword(input.currentPassword, admin.passwordHash))
+    if (!admin?.passwordHash || !verifyPassword(input.currentPassword, admin.passwordHash))
       throw new HttpError(401, "Current password is incorrect.", "INVALID_CREDENTIALS");
     if (input.currentPassword === input.newPassword)
       throw new HttpError(400, "Choose a different password.", "VALIDATION_ERROR");

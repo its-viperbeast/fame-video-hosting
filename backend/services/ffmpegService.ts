@@ -5,7 +5,7 @@ import { assertMp4 } from "../utils/validation.js";
 import { resolveFfmpegArgs } from "../utils/ffmpegArgs.js";
 import { HttpError } from "../utils/http.js";
 
-export async function assertFileMp4(filePath) {
+export async function assertFileMp4(filePath: string) {
   const handle = await open(filePath, "r");
   try {
     const buffer = Buffer.alloc(4096);
@@ -16,8 +16,13 @@ export async function assertFileMp4(filePath) {
   }
 }
 
-function run(args, signal, timeoutMs, failure) {
-  return new Promise((resolve, reject) => {
+function run(
+  args: string[],
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
+  failure: () => HttpError,
+) {
+  return new Promise<void>((resolve, reject) => {
     const child = spawn(env.FFMPEG_PATH, args, { stdio: ["ignore", "ignore", "pipe"] });
     let stderr = "";
     const kill = () => child.kill("SIGKILL");
@@ -27,10 +32,10 @@ function run(args, signal, timeoutMs, failure) {
       clearTimeout(timer);
       signal?.removeEventListener("abort", kill);
     };
-    child.stderr.on("data", (chunk) => {
+    child.stderr?.on("data", (chunk: Buffer | string) => {
       stderr = (stderr + chunk.toString()).slice(-2000);
     });
-    child.on("error", (error) => {
+    child.on("error", (error: NodeJS.ErrnoException) => {
       finish();
       reject(
         error.code === "ENOENT"
@@ -49,7 +54,7 @@ function run(args, signal, timeoutMs, failure) {
   });
 }
 
-export const remux = (inputPath, outputPath, signal) =>
+export const remux = (inputPath: string, outputPath: string, signal?: AbortSignal) =>
   run(
     resolveFfmpegArgs(env.FFMPEG_ARGS, inputPath, outputPath),
     signal,
@@ -60,7 +65,12 @@ export const remux = (inputPath, outputPath, signal) =>
 // Seeking past the end exits successfully without writing a file; callers check the output.
 // One frame of the first real video stream, scaled to square pixels so the
 // display aspect ratio survives. sharp encodes the WebP from this PNG.
-export const extractFrame = (inputPath, outputPath, seconds, signal) =>
+export const extractFrame = (
+  inputPath: string,
+  outputPath: string,
+  seconds: number,
+  signal?: AbortSignal,
+) =>
   run(
     [
       "-hide_banner",

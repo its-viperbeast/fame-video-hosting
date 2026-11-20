@@ -18,8 +18,8 @@ const schema = new mongoose.Schema(
     timestamps: true,
     versionKey: false,
     toJSON: {
-      transform(_doc, ret) {
-        ret.id = ret._id.toString();
+      transform(_doc, ret: Record<string, unknown>) {
+        ret.id = String(ret._id);
         delete ret._id;
         delete ret.owner;
         delete ret.key;
@@ -35,4 +35,5 @@ const schema = new mongoose.Schema(
 schema.index({ owner: 1, tags: 1 });
 schema.index({ owner: 1, createdAt: -1, _id: -1 });
 schema.index({ status: 1, updatedAt: 1 });
+export type VideoRecord = mongoose.InferSchemaType<typeof schema>;
 export default mongoose.model("Video", schema);
