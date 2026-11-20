@@ -115,10 +115,8 @@ export function Sidebar({ stats, open, onClose, onLogout, onLock, dark, onTheme 
                 <span className="flex-1">{label}</span>
                 {count > 0 && (
                   <span
-                    className={`rounded px-1.5 py-px text-xs leading-4 ${
-                      active
-                        ? "bg-[#dceaff] text-brand"
-                        : "bg-[#f0f3f7] text-[#8793a5] dark:bg-line dark:text-muted"
+                    className={`rounded px-1.5 py-px text-xs leading-4 tabular-nums ${
+                      active ? "bg-[#dceaff] text-brand" : "bg-[#f0f3f7] text-muted dark:bg-line"
                     }`}
                   >
                     {count}
@@ -189,11 +187,18 @@ export function Header({ onMenu, menuOpen, onLock }) {
   const favorites =
     pathname === "/videos" && new URLSearchParams(search).get("filter") === "favorites";
   const title = favorites ? "Favorites" : pageTitles[pathname] || "Overview";
+  useEffect(() => {
+    const previous = document.title;
+    document.title = `${title} · Frame`;
+    return () => {
+      document.title = previous;
+    };
+  }, [title]);
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-surface px-5 sm:px-8">
       <div className="flex items-center gap-3.5 text-xs text-muted">
         <button
-          className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[#6e83a1] hover:bg-surfacehover hover:text-brand md:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-surfacehover hover:text-brand md:hidden"
           aria-label="Open navigation"
           aria-expanded={menuOpen}
           aria-controls="primary-sidebar"
@@ -204,7 +209,7 @@ export function Header({ onMenu, menuOpen, onLock }) {
         <strong className="font-semibold text-[#33415a] dark:text-muted">{title}</strong>
       </div>
       <button
-        className="inline-flex h-10 items-center gap-2 rounded-lg px-2.5 text-sm font-medium text-[#6e83a1] hover:bg-surfacehover hover:text-brand"
+        className="inline-flex h-10 items-center gap-2 rounded-lg px-2.5 text-sm font-medium text-muted hover:bg-surfacehover hover:text-brand"
         type="button"
         aria-label="Lock"
         onClick={onLock}

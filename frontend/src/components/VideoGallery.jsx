@@ -110,7 +110,7 @@ export default function VideoGallery({
             className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold whitespace-nowrap ${
               search
                 ? "border border-line bg-surface hover:bg-surfacehover"
-                : "bg-brand text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110"
+                : "bg-brandsolid text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110"
             }`}
             onClick={onUpload}
           >
@@ -133,19 +133,19 @@ export default function VideoGallery({
         </div>
       )}
       {!loading && pagination?.total > 0 && (
-        <div className="flex items-center justify-between gap-4 py-5 text-xs text-[#9ba6b6]">
+        <div className="flex items-center justify-between gap-4 py-5 text-xs text-muted tabular-nums">
           <span>
             Showing{" "}
-            <strong className="font-medium text-[#78869d]">
+            <strong className="font-medium text-ink">
               {(pagination.page - 1) * pagination.limit + 1}–
               {Math.min(pagination.page * pagination.limit, pagination.total)}
             </strong>{" "}
-            of <strong className="font-medium text-[#78869d]">{pagination.total}</strong>{" "}
+            of <strong className="font-medium text-ink">{pagination.total}</strong>{" "}
             {filter === "favorites" ? "favorites" : "videos"}
           </span>
           <div className="mx-auto flex items-center gap-1.5">
             <button
-              className="grid h-9 min-h-9 w-9 place-items-center rounded border border-line bg-surface text-[#8a9aaf] hover:bg-brandlight disabled:opacity-50"
+              className="grid h-9 min-h-9 w-9 place-items-center rounded border border-line bg-surface text-muted hover:bg-brandlight disabled:opacity-50"
               aria-label="Previous page"
               disabled={pagination.page === 1}
               onClick={() => onPage(pagination.page - 1)}
@@ -160,7 +160,7 @@ export default function VideoGallery({
               return (
                 <button
                   key={page}
-                  className={`grid h-9 min-h-9 w-9 place-items-center rounded text-xs text-[#8a9aaf] hover:bg-brandlight ${
+                  className={`grid h-9 min-h-9 w-9 place-items-center rounded text-xs text-muted hover:bg-brandlight ${
                     pagination.page === page
                       ? "border border-[#dfeafb] bg-brandlight text-brand"
                       : ""
@@ -174,7 +174,7 @@ export default function VideoGallery({
               );
             })}
             <button
-              className="grid h-9 min-h-9 w-9 place-items-center rounded border border-line bg-surface text-[#8a9aaf] hover:bg-brandlight disabled:opacity-50"
+              className="grid h-9 min-h-9 w-9 place-items-center rounded border border-line bg-surface text-muted hover:bg-brandlight disabled:opacity-50"
               aria-label="Next page"
               disabled={pagination.page >= pagination.pages}
               onClick={() => onPage(pagination.page + 1)}
@@ -182,7 +182,7 @@ export default function VideoGallery({
               <ChevronRight size={16} />
             </button>
           </div>
-          <span className="hidden text-[#adb7c5] lg:inline">
+          <span className="hidden text-muted lg:inline">
             Page {pagination.page} of {pagination.pages}
           </span>
         </div>

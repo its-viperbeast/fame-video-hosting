@@ -126,7 +126,7 @@ function Workspace({ dark, onTheme, onSignedOut, onLock }) {
     <div className="min-h-dvh bg-bg">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-4 focus:z-100 focus:rounded-lg focus:bg-brand focus:px-4 focus:py-3 focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-4 focus:z-100 focus:rounded-lg focus:bg-brandsolid focus:px-4 focus:py-3 focus:text-white"
       >
         Skip to content
       </a>
@@ -196,6 +196,9 @@ function Root() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", dark ? "#101b2b" : "#f7f9fc");
     try {
       localStorage.setItem("theme", dark ? "dark" : "light");
     } catch {

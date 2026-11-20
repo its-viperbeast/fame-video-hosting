@@ -11,7 +11,7 @@ export default function Modal({ title, children, onClose, className = "", footer
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <section
-        className={`w-full max-w-[620px] overflow-auto rounded-xl border border-line bg-surface shadow-[0_24px_100px_#081a3c33] outline-none animate-modal-in max-h-[calc(100dvh-2rem)] ${className}`}
+        className={`w-full max-w-[620px] overflow-auto rounded-xl border border-line bg-surface shadow-[0_24px_100px_#081a3c33] overscroll-contain outline-none animate-modal-in max-h-[calc(100dvh-2rem)] ${className}`}
         ref={ref}
         role="dialog"
         aria-modal="true"

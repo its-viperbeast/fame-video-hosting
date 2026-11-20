@@ -38,8 +38,10 @@ export default function Login({ onSuccess, initialError = "" }) {
         <input
           className="w-full rounded-lg border border-line bg-surface px-3 py-3 text-sm text-ink outline-none focus:border-[#89b6f4] focus:ring-2 focus:ring-[#2877e910]"
           id="login-email"
+          name="email"
           type="email"
           autoComplete="email"
+          spellCheck={false}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="you@example.com"
@@ -54,6 +56,7 @@ export default function Login({ onSuccess, initialError = "" }) {
           <input
             className="w-full rounded-lg border border-line bg-surface px-3 py-3 pr-[45px] text-sm text-ink outline-none focus:border-[#89b6f4] focus:ring-2 focus:ring-[#2877e910]"
             id="login-password"
+            name="password"
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             value={password}
@@ -83,7 +86,7 @@ export default function Login({ onSuccess, initialError = "" }) {
         )}
 
         <button
-          className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brandsolid px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           type="submit"
           disabled={busy}
         >

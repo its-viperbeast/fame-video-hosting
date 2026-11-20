@@ -103,7 +103,7 @@ export default function ChangePassword() {
           </p>
         )}
         <button
-          className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brandsolid px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           type="submit"
           disabled={busy}
         >

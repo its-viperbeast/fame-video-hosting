@@ -119,6 +119,7 @@ export default function VideoCard({
     [pos, setPos] = useState(null);
   const menuRef = useRef(null);
   const anchorRef = useRef(null);
+  const triggerRef = useRef(null);
   const menuItems = [
     { icon: Play, label: "Preview video", action: onPlay },
     { icon: Download, label: "Download", action: onDownload },
@@ -146,7 +147,9 @@ export default function VideoCard({
   useEffect(() => {
     if (!menu) return;
     const onKey = (event) => {
-      if (event.key === "Escape") setMenu(false);
+      if (event.key !== "Escape") return;
+      setMenu(false);
+      triggerRef.current?.focus();
     };
     const onScroll = () => setMenu(false);
     document.addEventListener("keydown", onKey);
@@ -179,6 +182,32 @@ export default function VideoCard({
     setPos({ top, left });
   }, [menu]);
 
+  // Focus waits for the menu to be placed; a hidden element cannot take it.
+  const placed = pos !== null;
+  useEffect(() => {
+    if (menu && placed) menuRef.current?.querySelector('[role="menuitem"]')?.focus();
+  }, [menu, placed]);
+
+  function menuKeys(event) {
+    if (event.key === "Tab") {
+      // Leaving the menu hands focus back so Tab continues from the trigger.
+      triggerRef.current?.focus();
+      setMenu(false);
+      return;
+    }
+    const items = [...event.currentTarget.querySelectorAll('[role="menuitem"]')];
+    const at = items.indexOf(document.activeElement);
+    const next = {
+      ArrowDown: (at + 1) % items.length,
+      ArrowUp: (at - 1 + items.length) % items.length,
+      Home: 0,
+      End: items.length - 1,
+    }[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    items[next].focus();
+  }
+
   const isList = view === "list";
 
   return (
@@ -204,7 +233,7 @@ export default function VideoCard({
         {selectable && (
           <button
             className={`absolute top-2.5 left-2.5 z-[2] grid h-5 w-5 place-items-center rounded border border-[#ffffffaa] bg-[#ffffff33] text-white backdrop-blur-sm transition-opacity hover:opacity-100 focus-visible:opacity-100 ${
-              selected ? "bg-brand opacity-100" : "opacity-0 group-hover:opacity-100"
+              selected ? "bg-brandsolid opacity-100" : "opacity-0 group-hover:opacity-100"
             }`}
             aria-label={`Select ${video.name}`}
             aria-pressed={selected}
@@ -251,24 +280,31 @@ export default function VideoCard({
           </div>
           <div className="relative" ref={anchorRef}>
             <button
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#91a0b6] hover:bg-surfacehover hover:text-brand"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surfacehover hover:text-brand"
               aria-label={`More options for ${video.name}`}
               aria-haspopup="menu"
               aria-expanded={menu}
               aria-controls={`video-menu-${video.id}`}
+              ref={triggerRef}
               onClick={() => setMenu(!menu)}
             >
               <Ellipsis size={19} />
             </button>
             {menu && (
               <>
-                <div className="fixed inset-0 z-40 cursor-default" onClick={() => setMenu(false)} />
+                <div
+                  className="fixed inset-0 z-40 cursor-default"
+                  onClick={() => setMenu(false)}
+                  aria-hidden="true"
+                />
                 <div
                   className={`fixed z-50 max-h-[70vh] min-w-44 overflow-auto rounded-[10px] border border-line bg-surface p-1.5 shadow-[0_8px_35px_#20334c15] ${pos ? "" : "invisible"}`}
                   style={pos ? { top: pos.top, left: pos.left } : undefined}
                   id={`video-menu-${video.id}`}
                   role="menu"
+                  aria-label={`Options for ${video.name}`}
                   ref={menuRef}
+                  onKeyDown={menuKeys}
                 >
                   {menuItems.map(({ icon: Icon, label, action, className }) => (
                     <button
@@ -277,6 +313,9 @@ export default function VideoCard({
                       className={`flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-left text-xs whitespace-nowrap hover:bg-surfacehover ${className ?? ""}`}
                       onClick={() => {
                         setMenu(false);
+                        // A dialog opened by this action returns focus to its opener,
+                        // and this menu item is about to unmount.
+                        triggerRef.current?.focus();
                         action(video);
                       }}
                     >

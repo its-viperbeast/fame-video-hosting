@@ -76,7 +76,7 @@ function MetricCards({ stats }) {
               <Icon size={18} />
             </span>
           </div>
-          <div className="font-display mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0 text-[26px] leading-8 font-bold tracking-tight text-heading">
+          <div className="font-display mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0 text-[26px] leading-8 font-bold tracking-tight text-heading tabular-nums">
             {key === "size" ? formatBytes(stats.size, 2) : stats[key] || 0}
             {key === "size" && (
               <span className="font-sans mt-1 text-xs font-normal tracking-normal text-muted">
@@ -138,16 +138,16 @@ function UploadBanner({ onUpload, maxSize, onDrop }) {
         <h2 className="font-display text-lg font-bold tracking-tight text-[#2d4b75] dark:text-ink">
           Drop it. Upload it. Make it yours.
         </h2>
-        <p className="mt-1.5 text-xs text-[#91a2b9] dark:text-muted">
+        <p className="mt-1.5 text-xs text-muted">
           Drag & drop your videos here, or choose a file to get started.
         </p>
-        <span className="mt-3 flex items-center gap-1.5 text-xs text-[#96a8c1] dark:text-muted">
+        <span className="mt-3 flex items-center gap-1.5 text-xs text-muted">
           <i className="mx-1 h-[3px] w-[3px] rounded-full bg-[#b9c8dc]" />
           MP4 up to {formatBytes(maxSize, 0)}
         </span>
       </div>
       <button
-        className="relative z-[2] inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 sm:self-center"
+        className="relative z-[2] inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-lg bg-brandsolid px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 sm:self-center"
         onClick={onUpload}
       >
         <Plus size={17} />
@@ -328,7 +328,7 @@ export default function Dashboard({
             </div>
             <div className="flex flex-col items-start gap-3.5 pt-1 sm:items-end">
               <button
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brandsolid px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110"
                 onClick={onUpload}
               >
                 <Plus size={18} />
@@ -464,7 +464,7 @@ export default function Dashboard({
                 Refresh
               </button>
               <button
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brandsolid px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110"
                 onClick={onUpload}
               >
                 <Plus size={16} />
@@ -484,7 +484,7 @@ export default function Dashboard({
                   onClick={() => navigate(`${location.pathname}?filter=${key}`)}
                   aria-pressed={filter === key}
                 >
-                  <Icon size={15} className={filter === key ? "text-brand" : "text-[#9ba8b9]"} />
+                  <Icon size={15} className={filter === key ? "text-brand" : "text-muted"} />
                   {text}
                   {count > 0 && (
                     <span className="rounded bg-brandlight px-1 py-px text-xs">{count}</span>
@@ -521,13 +521,13 @@ export default function Dashboard({
               )}
             </div>
             <div className="flex items-center gap-2.5">
-              <div className="flex min-h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-2 text-xs text-[#8b98ac] focus-within:border-brand focus-within:ring-2 focus-within:ring-[#2877e91a]">
-                <ArrowDownUp size={15} className="text-[#9aa7ba]" />
+              <div className="flex min-h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-2 text-xs text-muted focus-within:border-brand focus-within:ring-2 focus-within:ring-[#2877e91a]">
+                <ArrowDownUp size={15} className="text-muted" />
                 <select
                   value={sort}
                   onChange={(event) => onSort(event.target.value)}
                   aria-label="Sort videos"
-                  className="cursor-pointer appearance-none border-0 bg-none pr-1 text-[13px] text-muted outline-none"
+                  className="cursor-pointer appearance-none border-0 bg-surface bg-none pr-1 text-[13px] text-muted outline-none"
                 >
                   <option value="newest">Newest first</option>
                   <option value="oldest">Oldest first</option>
@@ -538,7 +538,7 @@ export default function Dashboard({
               </div>
               <div className="flex items-center gap-1 rounded-lg border border-line bg-surface p-[3px]">
                 <button
-                  className={`grid h-9 min-h-9 w-9 place-items-center rounded ${view === "grid" ? "bg-brandlight text-brand" : "text-[#a1adbd] hover:text-brand"}`}
+                  className={`grid h-9 min-h-9 w-9 place-items-center rounded ${view === "grid" ? "bg-brandlight text-brand" : "text-muted hover:text-brand"}`}
                   aria-label="Grid view"
                   aria-pressed={view === "grid"}
                   onClick={() => setView("grid")}
@@ -546,7 +546,7 @@ export default function Dashboard({
                   <Grid2X2 size={17} />
                 </button>
                 <button
-                  className={`grid h-9 min-h-9 w-9 place-items-center rounded ${view === "list" ? "bg-brandlight text-brand" : "text-[#a1adbd] hover:text-brand"}`}
+                  className={`grid h-9 min-h-9 w-9 place-items-center rounded ${view === "list" ? "bg-brandlight text-brand" : "text-muted hover:text-brand"}`}
                   aria-label="List view"
                   aria-pressed={view === "list"}
                   onClick={() => setView("list")}
@@ -666,7 +666,7 @@ export default function Dashboard({
           <div className="mb-4 grid h-13 w-13 place-items-center rounded-full bg-[#fff0f0] text-[#dc6670] dark:bg-[#492b39]">
             <Trash2 size={25} />
           </div>
-          <p className="mb-3 text-xs leading-loose text-[#8190a4] wrap-anywhere">
+          <p className="mb-3 text-xs leading-loose text-muted wrap-anywhere">
             {deleting.length === 1 ? (
               <strong>{deleting[0].name}</strong>
             ) : (

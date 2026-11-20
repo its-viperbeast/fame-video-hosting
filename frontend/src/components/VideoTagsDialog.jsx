@@ -126,7 +126,7 @@ export default function VideoTagsDialog({ video, onClose, onSaved, onTagClick })
             Cancel
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brandsolid px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             type="submit"
             form="video-tags-form"
             disabled={saving || !canSave}
@@ -172,7 +172,7 @@ export default function VideoTagsDialog({ video, onClose, onSaved, onTagClick })
           ))}
         </div>
         <div className="relative mt-2.5 flex items-center gap-2" ref={boxRef}>
-          <Tags size={15} className="pointer-events-none absolute left-3 text-[#98a3b4]" />
+          <Tags size={15} className="pointer-events-none absolute left-3 text-muted" />
           <input
             id="video-tags-input"
             className="w-full rounded-lg border border-line bg-surface py-3 pr-3 pl-[34px] text-sm text-ink outline-none focus:border-[#89b6f4] focus:ring-2 focus:ring-[#2877e910]"

@@ -68,17 +68,19 @@ async function present(video: {
 // Names typed in the UI may not exist yet: dedupe case-insensitively and
 // create the missing ones for this owner, then return their ids.
 async function resolveTagIds(owner: string, names: string[]) {
-  const ids: Types.ObjectId[] = [];
-  for (const [nameKey, name] of new Map(names.map((name) => [tagKey(name), name]))) {
-    const tag = await Tag.findOneAndUpdate(
-      { owner, nameKey },
-      { $setOnInsert: { owner, name, nameKey } },
-      { new: true, upsert: true },
-    );
-    if (!tag) throw new HttpError(500, "The tag could not be saved.", "INTERNAL_ERROR");
-    ids.push(tag._id);
-  }
-  return ids;
+  const unique = new Map(names.map((name) => [tagKey(name), name]));
+  // Keys are unique here, so the upserts cannot collide. At most 10 run at once.
+  return Promise.all(
+    [...unique].map(async ([nameKey, name]) => {
+      const tag = await Tag.findOneAndUpdate(
+        { owner, nameKey },
+        { $setOnInsert: { owner, name, nameKey } },
+        { new: true, upsert: true },
+      );
+      if (!tag) throw new HttpError(500, "The tag could not be saved.", "INTERNAL_ERROR");
+      return tag._id;
+    }),
+  );
 }
 
 // Runs before Multer, so a cancel stops the transfer as well as processing.

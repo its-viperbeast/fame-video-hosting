@@ -59,7 +59,7 @@ export default function UploadProgress({ item, onRetry, onRemove, onCancel, onPr
           </strong>
           <p className="mt-1 text-xs text-muted">
             {uploading ? sent : formatBytes(item.file.size)}{" "}
-            <span className="text-[#a6b0bf]">· MP4</span>
+            <span className="text-muted">· MP4</span>
           </p>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-brand max-sm:ml-14">

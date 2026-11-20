@@ -134,7 +134,7 @@ export const formatDuration = (s = 0) =>
   `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 export const formatDate = (d) =>
-  new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
 export async function inspectVideo(file) {
   const header = new Uint8Array(await file.slice(0, 16).arrayBuffer());

@@ -209,7 +209,7 @@ export default function VideoUpload({
           </button>
           <button
             className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white hover:brightness-110 ${
-              busy ? "bg-[#df424b]" : "bg-brand shadow-[0_3px_6px_#2877e919]"
+              busy ? "bg-[#df424b]" : "bg-brandsolid shadow-[0_3px_6px_#2877e919]"
             }`}
             onClick={leave}
           >
@@ -275,7 +275,7 @@ export default function VideoUpload({
               <h3 className="font-display m-0 mb-2 text-base font-bold text-heading">
                 Drop your videos here
               </h3>
-              <p className="text-xs text-[#8c9db4]">
+              <p className="text-xs text-muted">
                 or{" "}
                 <button
                   className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:underline hover:underline-offset-4"
@@ -286,7 +286,7 @@ export default function VideoUpload({
                 </button>{" "}
                 from your computer
               </p>
-              <span className="mt-3 block text-xs leading-relaxed text-[#9babbe] dark:text-muted">
+              <span className="mt-3 block text-xs leading-relaxed text-muted">
                 MP4 format · Up to {formatBytes(maxSize, 0)} per video
                 <br />
                 Up to {MAX_CONCURRENT_UPLOADS} videos upload at once
@@ -401,7 +401,7 @@ export default function VideoUpload({
                 ))}
               </div>
             )}
-            <div className="mt-5 flex items-center gap-2.5 text-[#92a1b5]">
+            <div className="mt-5 flex items-center gap-2.5 text-muted">
               <FileVideo size={18} />
               <p className="text-xs leading-relaxed">
                 Bring your best quality. We’ll keep every detail, just as you intended.
@@ -410,7 +410,7 @@ export default function VideoUpload({
           </div>
           <footer className="flex flex-wrap items-center gap-3 rounded-b-xl border-t border-line bg-surfacehover px-5 py-4 sm:px-7">
             <button
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brandsolid px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 max-sm:w-full"
               disabled={inspecting || !pending.length}
               onClick={() => upload(pending)}
             >

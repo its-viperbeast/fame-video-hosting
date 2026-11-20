@@ -182,7 +182,7 @@ export default function TagsPage() {
             Open any video’s menu, choose Add tags, and type a name — new tags are created on save.
           </p>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brandsolid px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110"
             onClick={() => navigate("/videos")}
           >
             Browse videos
@@ -260,7 +260,7 @@ export default function TagsPage() {
                 Cancel
               </button>
               <button
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brandsolid px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white shadow-[0_3px_6px_#2877e919] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                 type="submit"
                 form="tag-rename-form"
                 disabled={editSaving || !editName.trim() || editName.trim() === editing.name}
@@ -329,7 +329,7 @@ export default function TagsPage() {
           <div className="mb-4 grid h-13 w-13 place-items-center rounded-full bg-[#fff0f0] text-[#dc6670] dark:bg-[#492b39]">
             <Trash2 size={25} />
           </div>
-          <p className="mb-3 text-xs leading-loose text-[#8190a4] wrap-anywhere">
+          <p className="mb-3 text-xs leading-loose text-muted wrap-anywhere">
             <strong>{deleting.name}</strong> will be removed from{" "}
             {deleting.videoCount === 1 ? "1 video" : `${deleting.videoCount} videos`}. The videos
             stay in your library.
